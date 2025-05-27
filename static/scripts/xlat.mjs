@@ -4,7 +4,8 @@ export const Xlat = {
       "repeater": "Répéteur",
       "mode": "Mode",
       "notes": "Remarques",
-      "knobs": "Réglages"
+      "knobs": "Réglages",
+      "decoderOutput": "Sortie Décodée"
     },
     "key": {
       "key": "Key",
@@ -44,7 +45,8 @@ export const Xlat = {
       "repeater": "Repeater",
       "mode": "Mode",
       "notes": "Notes",
-      "knobs": "Knobs"
+      "knobs": "Knobs",
+      "decoderOutput": "Decoded Output"
     },
     "key": {
       "key": "Key",
@@ -84,7 +86,8 @@ export const Xlat = {
       "repeater": "Repeater",
       "mode": "Läge",
       "notes": "Anteckningar",
-      "knobs": "Rattar"
+      "knobs": "Rattar",
+      "decoderOutput": "Avkodad Utdata"
     },
     "key": {
       "key": "Nyckel",
