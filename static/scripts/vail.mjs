@@ -80,6 +80,16 @@ class VailClient {
 		initLog("Setting up input methods")
 		this.inputs = new Inputs.Collection(this)
 
+		// Initialize Morse Decoder and related properties FIRST
+		initLog("Initializing Morse Decoder"); 
+		this.decoderOutputElement = document.querySelector("#decoder-output");
+		this.morseDecoder = new MorseDecoder((char) => {
+			this.updateDecodedOutput(char);
+		});
+		this.lastReceiveTime = 0; // To keep track of the end time of the last received signal portion
+		this.lastSignalTime = Date.now(); // Initial reference for first silence calculation
+		this.decodingTimeout = null; // For forceDecode timeout
+
 		initLog("Listening on AudioContext")
 		document.body.addEventListener(
 			"click",
@@ -153,15 +163,6 @@ class VailClient {
 				e.classList.add("is-hidden")
 			}
 		})
-
-		// Initialize Morse Decoder
-		this.decoderOutputElement = document.querySelector("#decoder-output");
-		this.morseDecoder = new MorseDecoder((char) => {
-			this.updateDecodedOutput(char);
-		});
-		this.lastReceiveTime = 0; // To keep track of the end time of the last received signal portion
-		this.lastSignalTime = Date.now(); // Initial reference for first silence calculation
-		this.decodingTimeout = null; // For forceDecode timeout
 	}
 
 	updateDecodedOutput(char) {
@@ -542,7 +543,7 @@ class VailClient {
 				this.morseDecoder.forceDecode();
                 this.lastSignalTime = Date.now(); // Update for next potential silence period
 			}
-		}, this.morseDecoder.unitTime * (MEDIUM_SPACE_RATIO + 2)); // A bit longer than word space, MEDIUM_SPACE_RATIO from decoder.mjs
+		}, this.morseDecoder.unitTime * (this.morseDecoder.MEDIUM_SPACE_RATIO + 2));
 	}
 
 	/**
@@ -610,7 +611,3 @@ if (document.readyState === "loading") {
 }
 
 // vim: noet sw=2 ts=2
-
-// Constants from decoder.mjs, used in VailClient for timeout logic.
-// Consider importing them or defining them in a shared constants module.
-const MEDIUM_SPACE_RATIO = 5.0; 
