@@ -67,21 +67,29 @@ export class MorseDecoder {
 
     // Call this when a signal ends (key up)
     signalEnd(timestamp) {
-        if (this.lastSignalTime === 0) return; // Should not happen if signalStart was called
+        if (this.lastSignalTime === 0) return;
 
         const onDuration = timestamp - this.lastSignalTime;
         this.lastSignalTime = timestamp;
 
-        if (onDuration <= 0) return;
+        // Define a minimum duration for a signal to be considered a mark.
+        // This can be absolute (e.g., 15-20ms) or relative to unitTime,
+        // but an absolute minimum helps against noise when unitTime is still unstable.
+        const MIN_MARK_DURATION = 15; // milliseconds
+
+        if (onDuration < MIN_MARK_DURATION) {
+            // console.log(`Ignoring very short signal: ${onDuration}ms`); // Optional debug
+            return; // Ignore very short signals / noise
+        }
 
         // Add to signal buffer and maintain its size
         this.signalBuffer.push(onDuration);
-        if (this.signalBuffer.length > MAX_SIGNAL_HISTORY) {
+        if (this.signalBuffer.length > this.MAX_SIGNAL_HISTORY) {
             this.signalBuffer.shift();
         }
-        this.updateUnitTime();
+        this.updateUnitTime(); // updateUnitTime might also benefit from only using valid marks
 
-        if (onDuration < this.unitTime * DIT_DAH_RATIO_THRESHOLD) {
+        if (onDuration < this.unitTime * this.DIT_DAH_RATIO_THRESHOLD) {
             this.currentMorsePattern += '.';
         } else {
             this.currentMorsePattern += '-';

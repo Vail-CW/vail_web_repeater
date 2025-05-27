@@ -301,26 +301,20 @@ class VailClient {
            clearTimeout(this.decodingTimeout);
            this.decodingTimeout = null;
        }
+
+       let timeoutDuration = 1000; // Default fallback timeout
        if (this.morseDecoder && this.morseDecoder.unitTime > 0 && this.morseDecoder.MEDIUM_SPACE_RATIO > 0) {
+           timeoutDuration = this.morseDecoder.unitTime * (this.morseDecoder.MEDIUM_SPACE_RATIO + 2);
+       }
+
+       if (this.morseDecoder) {
            this.decodingTimeout = setTimeout(() => {
                if (this.morseDecoder) {
-                   const currentTime = Date.now();
-                   this.morseDecoder.signalStart(this.lastSignalTime || (currentTime - (this.morseDecoder.unitTime * (this.morseDecoder.MEDIUM_SPACE_RATIO + 1))));
-                   this.morseDecoder.signalEnd(currentTime);
+                   console.log("Timeout: Forcing decode. Current pattern:", this.morseDecoder.currentMorsePattern, "LastSignalTime:", this.lastSignalTime);
                    this.morseDecoder.forceDecode();
-                   this.lastSignalTime = currentTime;
+                   // No need to update this.lastSignalTime here; let actual signal events manage it.
                }
-           }, this.morseDecoder.unitTime * (this.morseDecoder.MEDIUM_SPACE_RATIO + 2));
-       } else if (this.morseDecoder) {
-            this.decodingTimeout = setTimeout(() => {
-                 if (this.morseDecoder) {
-                    const currentTime = Date.now();
-                    this.morseDecoder.signalStart(this.lastSignalTime || (currentTime - 1000));
-                    this.morseDecoder.signalEnd(currentTime);
-                    this.morseDecoder.forceDecode();
-                    this.lastSignalTime = currentTime;
-                 }
-            }, 1000);
+           }, timeoutDuration);
        }
    }
 
