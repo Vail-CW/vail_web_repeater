@@ -266,7 +266,11 @@ class VailClient {
 		let endTxTime = Date.now()
 		let duration = endTxTime - this.beginTxTime
 		this.outputs.Silence(true)
-		this.repeater.Transmit(this.beginTxTime, duration)
+		if (this.repeater) { // Add this check
+			this.repeater.Transmit(this.beginTxTime, duration)
+		} else {
+			console.warn("EndTx called but repeater is not initialized. Transmission ignored.");
+		}
 		this.beginTxTime = null
 		if (this.txChart) this.txChart.Set(0)
 	}
