@@ -30,6 +30,15 @@ const MEDIUM_SPACE_RATIO = 5.0; // Max space between words (relative to unit tim
 export class MorseDecoder {
     constructor(onDecodedChar) {
         this.onDecodedChar = onDecodedChar; // Callback function when a character is decoded
+
+        // Assign constants as instance properties
+        this.MAX_SIGNAL_HISTORY = 20;
+        this.DIT_DAH_RATIO_THRESHOLD = 2;
+        this.INTER_ELEMENT_SPACE_RATIO = 0.7;
+        this.SHORT_SPACE_RATIO = 2.0;
+        this.MEDIUM_SPACE_RATIO = 5.0;
+        this.MORSE_CODE_LOOKUP = MORSE_CODE_LOOKUP;
+
         this.reset();
         this.signalBuffer = []; // Stores recent signal (on-time) durations
         this.lastOffTime = 0; // Duration of the last off-period (silence)
@@ -82,22 +91,22 @@ export class MorseDecoder {
     processSilence(duration) {
         if (this.currentMorsePattern === '') return; // Nothing to process yet
 
-        if (duration > this.unitTime * MEDIUM_SPACE_RATIO) { // Word space
+        if (duration > this.unitTime * this.MEDIUM_SPACE_RATIO) { // Word space
             this.decodeCurrentPattern();
             this.onDecodedChar(' '); // Add word space
             this.currentMorsePattern = '';
-        } else if (duration > this.unitTime * SHORT_SPACE_RATIO) { // Character space
+        } else if (duration > this.unitTime * this.SHORT_SPACE_RATIO) { // Character space
             this.decodeCurrentPattern();
             this.currentMorsePattern = '';
-        } else if (duration > this.unitTime * INTER_ELEMENT_SPACE_RATIO) {
+        } else if (duration > this.unitTime * this.INTER_ELEMENT_SPACE_RATIO) {
             // Inter-element space, do nothing, wait for next signal
         }
         // Shorter silences are part of the current character, also do nothing.
     }
 
     decodeCurrentPattern() {
-        if (this.currentMorsePattern && MORSE_CODE_LOOKUP[this.currentMorsePattern]) {
-            const char = MORSE_CODE_LOOKUP[this.currentMorsePattern];
+        if (this.currentMorsePattern && this.MORSE_CODE_LOOKUP[this.currentMorsePattern]) {
+            const char = this.MORSE_CODE_LOOKUP[this.currentMorsePattern];
             this.onDecodedChar(char);
             this.decodedText += char; // For internal tracking/debugging
         }
@@ -114,7 +123,7 @@ export class MorseDecoder {
         let sortedSignals = [...this.signalBuffer].sort((a, b) => a - b);
         
         // Filter out overly long signals that are definitely dahs or noise
-        const potentialDits = sortedSignals.filter(s => s < ( (sortedSignals[Math.floor(sortedSignals.length / 2)] || this.unitTime * 1.5) * DIT_DAH_RATIO_THRESHOLD));
+        const potentialDits = sortedSignals.filter(s => s < ( (sortedSignals[Math.floor(sortedSignals.length / 2)] || this.unitTime * 1.5) * this.DIT_DAH_RATIO_THRESHOLD));
 
         if (potentialDits.length > 0) {
             // Average of the shortest third of signals, or just the shortest if few signals
@@ -127,6 +136,6 @@ export class MorseDecoder {
 
     // Call this if there's a long pause or a timeout to force decoding of the last pattern
     forceDecode() {
-        this.processSilence(this.unitTime * (MEDIUM_SPACE_RATIO + 1)); // Simulate a long space
+        this.processSilence(this.unitTime * (this.MEDIUM_SPACE_RATIO + 1)); // Simulate a long space
     }
 }
