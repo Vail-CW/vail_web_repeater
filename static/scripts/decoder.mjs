@@ -45,6 +45,7 @@ export class MorseDecoder {
         this.unitTime = 100; // ms - initial guess for a dit duration, will be dynamically adjusted
         this.lastSignalTime = 0; // Timestamp of the last signal edge (on or off)
         this.id = Math.random().toString(36).substring(2, 7); // Simple ID for multiple decoders if ever
+        this.MIN_SIGNALS_FOR_UNIT_TIME_UPDATE = 5;
         console.log(`[Decoder ${this.id}] Initialized. unitTime: ${this.unitTime}`);
     }
 
@@ -56,19 +57,30 @@ export class MorseDecoder {
 
     // Call this when a signal starts (key down)
     signalStart(timestamp) {
-        console.log(`[Decoder ${this.id}] signalStart called at ${timestamp}. Last signal time: ${this.lastSignalTime}`);
-        if (this.lastSignalTime === 0) { // First signal
-            this.lastSignalTime = timestamp;
-            console.log(`[Decoder ${this.id}] First signal, only updating lastSignalTime to ${timestamp}.`);
-            return;
+        console.log(`[Decoder ${this.id}] signalStart called at ${timestamp}. Current internal lastSignalTime: ${this.lastSignalTime}`);
+
+        if (this.lastSignalTime === 0) { // First signal ever for this decoder instance
+            // For the very first signal, there's no preceding silence to process.
+            // We don't set this.lastSignalTime here; signalEnd will set it after the first mark.
+            // Or, if this first event is a long silence from the start, processSilence might handle it.
+            // Let's assume an initial this.lastSignalTime of 0 means "beginning of time" for silence calculation.
+            // A very large offDuration will be treated as a word space.
+            console.log(`[Decoder ${this.id}] First signal event.`);
         }
 
         const offDuration = timestamp - this.lastSignalTime;
         console.log(`[Decoder ${this.id}] Calculated offDuration (silence): ${offDuration}ms.`);
-        this.lastSignalTime = timestamp;
-        this.lastOffTime = offDuration;
 
+        // Process the calculated silence.
+        // processSilence might update this.lastSignalTime if it decodes a character/word.
         this.processSilence(offDuration);
+        
+        // CRUCIAL CHANGE: Do NOT update this.lastSignalTime = timestamp here.
+        // this.lastSignalTime should only be updated:
+        //   1. By signalEnd, to the END of a mark.
+        //   2. By processSilence, to the END of a recognized character/word space (implicitly, via currentMorsePattern reset and next signal's silence calc).
+        // For the current mark that this signalStart PRECEDES, its beginning is `timestamp`.
+        // The decoder's internal `lastSignalTime` should still reflect the end of the *previous* element until this new mark concludes.
     }
 
     // Call this when a signal ends (key up)
@@ -80,7 +92,7 @@ export class MorseDecoder {
         }
 
         const onDuration = timestamp - this.lastSignalTime;
-        this.lastSignalTime = timestamp;
+        // this.lastSignalTime = timestamp; // This will be set at the end of the method
 
         // Define a minimum duration for a signal to be considered a mark.
         // This can be absolute (e.g., 15-20ms) or relative to unitTime,
@@ -109,28 +121,52 @@ export class MorseDecoder {
             mark = '-';
         }
         console.log(`[Decoder ${this.id}] Appended '${mark}' to pattern. New pattern: '${this.currentMorsePattern}'. unitTime: ${this.unitTime.toFixed(2)}ms.`);
+        this.lastSignalTime = timestamp; // This correctly sets the end of the current mark
+        console.log(`[Decoder ${this.id}] Mark processed. Updated lastSignalTime to ${this.lastSignalTime}`);
     }
 
     processSilence(duration) {
-        console.log(`[Decoder ${this.id}] processSilence called with duration: ${duration.toFixed(2)}ms. Current pattern: '${this.currentMorsePattern}'. unitTime: ${this.unitTime.toFixed(2)}ms.`);
+        console.log(`[Decoder ${this.id}] processSilence called with duration: ${duration.toFixed(2)}ms. Current pattern: '${this.currentMorsePattern}'. unitTime: ${this.unitTime.toFixed(2)}ms. Original lastSignalTime: ${this.lastSignalTime}`);
+        const originalLastSignalTime = this.lastSignalTime; // Time at the end of the last mark
+
+        if (duration < 0) { 
+            console.warn(`[Decoder ${this.id}] Negative silence duration ${duration}ms. Ignoring. Timestamps might be out of order.`);
+            return; 
+        }
+
         if (this.currentMorsePattern === '') {
             console.log(`[Decoder ${this.id}] No current pattern to process with this silence.`);
+            // If there's no pattern, this silence just extends the period since the last mark (or start).
+            // Update lastSignalTime to the end of this silence period.
+            this.lastSignalTime = originalLastSignalTime + duration;
+            console.log(`[Decoder ${this.id}] No pattern, silence processed. Updated lastSignalTime to ${this.lastSignalTime}`);
             return;
         }
 
         if (duration > this.unitTime * this.MEDIUM_SPACE_RATIO) { // Word space
             console.log(`[Decoder ${this.id}] Interpreted as WORD_SPACE (>${(this.unitTime * this.MEDIUM_SPACE_RATIO).toFixed(2)}ms).`);
-            this.decodeCurrentPattern();
-            this.onDecodedChar(' '); // Add word space
-            this.currentMorsePattern = ''; // Already done in decodeCurrentPattern, but for clarity
+            this.decodeCurrentPattern(); // This resets currentMorsePattern
+            this.onDecodedChar(' ');
+            this.lastSignalTime = originalLastSignalTime + duration; // Mark end of word space
+            console.log(`[Decoder ${this.id}] Word space processed. Updated lastSignalTime to ${this.lastSignalTime}`);
         } else if (duration > this.unitTime * this.SHORT_SPACE_RATIO) { // Character space
             console.log(`[Decoder ${this.id}] Interpreted as CHARACTER_SPACE (>${(this.unitTime * this.SHORT_SPACE_RATIO).toFixed(2)}ms).`);
-            this.decodeCurrentPattern();
+            this.decodeCurrentPattern(); // This resets currentMorsePattern
+            this.lastSignalTime = originalLastSignalTime + duration; // Mark end of char space
+            console.log(`[Decoder ${this.id}] Char space processed. Updated lastSignalTime to ${this.lastSignalTime}`);
         } else if (duration > this.unitTime * this.INTER_ELEMENT_SPACE_RATIO) {
             console.log(`[Decoder ${this.id}] Interpreted as INTER_ELEMENT_SPACE (>${(this.unitTime * this.INTER_ELEMENT_SPACE_RATIO).toFixed(2)}ms). Pattern preserved.`);
-            // Inter-element space, do nothing, wait for next signal
+            // Pattern preserved. lastSignalTime is NOT updated here, it's still end of last mark for calculation of next element's silence.
+            // However, if subsequent calls to processSilence occur without an intervening signalEnd, this.lastSignalTime *should* be end of this space.
+            // For now, we assume signalEnd or another signalStart will follow. If this assumption is wrong, this logic might need refinement.
+            // The current VailClient logic calls signalStart before signalEnd for a mark, and processSilence is called by signalStart.
+            // If VailClient calls signalStart(notice_time) for a notice, then processSilence is called. This path needs to ensure lastSignalTime is updated.
+             this.lastSignalTime = originalLastSignalTime + duration; 
+             console.log(`[Decoder ${this.id}] Inter-element space. Updated lastSignalTime to ${this.lastSignalTime} to reflect end of this space.`);
+
         } else {
-            console.log(`[Decoder ${this.id}] Silence too short (${duration.toFixed(2)}ms), considered part of current pattern or noise.`);
+            console.log(`[Decoder ${this.id}] Silence too short (${duration.toFixed(2)}ms), considered part of current pattern or noise. lastSignalTime remains ${this.lastSignalTime}.`);
+            // Pattern preserved. lastSignalTime is NOT updated here.
         }
     }
 
@@ -150,33 +186,28 @@ export class MorseDecoder {
 
     // Dynamically updates the unitTime (dit duration)
     updateUnitTime() {
-        const oldUnitTime = this.unitTime;
-        if (this.signalBuffer.length === 0) {
-            console.log(`[Decoder ${this.id}] updateUnitTime: Signal buffer empty. unitTime remains ${this.unitTime.toFixed(2)}ms.`);
-            return;
-        }
+       const oldUnitTime = this.unitTime;
 
-        // Simple approach: use the shortest signal in the buffer as a candidate for unitTime
-        // More sophisticated methods could involve clustering or averaging.
-        let sortedSignals = [...this.signalBuffer].sort((a, b) => a - b);
-        
-        // Filter out overly long signals that are definitely dahs or noise
-        const potentialDits = sortedSignals.filter(s => s < ( (sortedSignals[Math.floor(sortedSignals.length / 2)] || this.unitTime * 1.5) * this.DIT_DAH_RATIO_THRESHOLD));
+       if (this.signalBuffer.length < this.MIN_SIGNALS_FOR_UNIT_TIME_UPDATE) {
+           console.log(`[Decoder ${this.id}] updateUnitTime: Signal buffer has ${this.signalBuffer.length} elements, less than required ${this.MIN_SIGNALS_FOR_UNIT_TIME_UPDATE}. unitTime remains ${this.unitTime.toFixed(2)}ms.`);
+           return;
+       }
 
-        if (potentialDits.length > 0) {
-            // Average of the shortest third of signals, or just the shortest if few signals
-            const numToAverage = Math.max(1, Math.floor(potentialDits.length / 3));
-            const sum = potentialDits.slice(0, numToAverage).reduce((acc, val) => acc + val, 0);
-            this.unitTime = Math.max(20, sum / numToAverage); // Ensure unitTime is not too small (e.g. 20ms min)
-            console.log(`[Decoder ${this.id}] updateUnitTime: Buffer: [${this.signalBuffer.join(', ')}]. Potential dits: [${potentialDits.join(', ')}]. New unitTime: ${this.unitTime.toFixed(2)}ms (was ${oldUnitTime.toFixed(2)}ms).`);
-        } else if (this.signalBuffer.length > 0) {
-            // If no potential dits found but buffer has signals (likely all long signals)
-            // Avoid changing unitTime drastically, or reset to a default if it's too far off.
-            // For now, just log. This case might need more thought if it causes issues.
-            console.log(`[Decoder ${this.id}] updateUnitTime: Buffer: [${this.signalBuffer.join(', ')}]. No potential dits found. unitTime remains ${this.unitTime.toFixed(2)}ms.`);
-        }
-        // The 'else' for signalBuffer empty is now at the top of the function.
-    }
+       let sortedSignals = [...this.signalBuffer].sort((a, b) => a - b);
+       const potentialDits = sortedSignals.filter(s => s < ( (sortedSignals[Math.floor(sortedSignals.length / 2)] || this.unitTime * 1.5) * this.DIT_DAH_RATIO_THRESHOLD));
+
+       if (potentialDits.length > 0) {
+           const numToAverage = Math.max(1, Math.floor(potentialDits.length / 3));
+           const sum = potentialDits.slice(0, numToAverage).reduce((acc, val) => acc + val, 0);
+           this.unitTime = Math.max(20, sum / numToAverage); // Min 20ms unit time
+           console.log(`[Decoder ${this.id}] updateUnitTime: Buffer: [${this.signalBuffer.join(', ')}]. Potential dits: [${potentialDits.join(', ')}]. New unitTime: ${this.unitTime.toFixed(2)}ms (was ${oldUnitTime.toFixed(2)}ms).`);
+       } else if (this.signalBuffer.length > 0) {
+           console.log(`[Decoder ${this.id}] updateUnitTime: Buffer: [${this.signalBuffer.join(', ')}]. No potential dits found. unitTime remains ${this.unitTime.toFixed(2)}ms.`);
+       } else {
+           // This case should ideally not be reached if the initial buffer length check is done.
+           console.log(`[Decoder ${this.id}] updateUnitTime: Signal buffer empty. unitTime remains ${this.unitTime.toFixed(2)}ms.`);
+       }
+   }
 
     // Call this if there's a long pause or a timeout to force decoding of the last pattern
     forceDecode() {
