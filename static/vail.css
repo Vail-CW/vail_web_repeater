@@ -131,3 +131,8 @@ code {
 	margin-top: -0.75rem; /* Pulls it closer to the charts block above */
 	/* Standard block margin-bottom: 1.5rem; will still apply for elements below it */
 }
+
+/* Ensure the toggle button aligns nicely with the label in the level */
+#decoder-output-container .level-left .label {
+	margin-bottom: 0; /* Remove default bottom margin for better alignment with button */
+}

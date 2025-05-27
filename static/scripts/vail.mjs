@@ -90,6 +90,35 @@ class VailClient {
 		this.lastSignalTime = Date.now(); // Initial reference for first silence calculation
 		this.decodingTimeout = null; // For forceDecode timeout
 
+		// Decoder Output Toggle
+		this.toggleDecoderButton = document.querySelector("#toggle-decoder-output");
+		this.decoderOutputIcon = this.toggleDecoderButton.querySelector("i"); // Get the icon element
+
+		let decoderVisible = localStorage.getItem('decoderVisible') !== 'false'; // Default to true if not set
+
+		const updateDecoderVisibility = (visible) => {
+			if (visible) {
+				this.decoderOutputElement.classList.remove('is-hidden');
+				this.decoderOutputIcon.classList.remove('mdi-eye-off');
+				this.decoderOutputIcon.classList.add('mdi-eye');
+				this.toggleDecoderButton.setAttribute('title', 'Hide decoded output');
+			} else {
+				this.decoderOutputElement.classList.add('is-hidden');
+				this.decoderOutputIcon.classList.remove('mdi-eye');
+				this.decoderOutputIcon.classList.add('mdi-eye-off');
+				this.toggleDecoderButton.setAttribute('title', 'Show decoded output');
+			}
+		};
+		updateDecoderVisibility(decoderVisible); // Apply initial state
+
+		this.toggleDecoderButton.addEventListener('click', () => {
+			let currentVisibility = !this.decoderOutputElement.classList.contains('is-hidden');
+			decoderVisible = !currentVisibility; // New state
+			updateDecoderVisibility(decoderVisible);
+			localStorage.setItem('decoderVisible', decoderVisible);
+		});
+
+
 		initLog("Listening on AudioContext")
 		document.body.addEventListener(
 			"click",
