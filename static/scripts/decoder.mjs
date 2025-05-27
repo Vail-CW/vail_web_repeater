@@ -28,10 +28,39 @@ const SHORT_SPACE_RATIO = 2.0; // Max space between characters (relative to unit
 const MEDIUM_SPACE_RATIO = 5.0; // Max space between words (relative to unit time)
 
 export class MorseDecoder {
-    constructor(onDecodedChar) {
-        this.onDecodedChar = onDecodedChar; // Callback function when a character is decoded
+    // Add initialUnitTime parameter
+    constructor(onDecodedChar, initialUnitTime = 100) { // Default to 100 if not provided
+        this.onDecodedChar = onDecodedChar;
+        this.id = Math.random().toString(36).substring(2, 7);
 
-        // Assign constants as instance properties
+        this.MAX_SIGNAL_HISTORY = 20;
+        this.DIT_DAH_RATIO_THRESHOLD = 2; // Standard: Dah is 2x or more length of Dit
+        this.INTER_ELEMENT_SPACE_RATIO = 0.7;
+        this.SHORT_SPACE_RATIO = 2.0;
+        this.MEDIUM_SPACE_RATIO = 5.0;
+        this.MORSE_CODE_LOOKUP = MORSE_CODE_LOOKUP;
+        this.MIN_SIGNALS_FOR_UNIT_TIME_UPDATE = 5;
+
+        this.unitTime = initialUnitTime; // Use provided initialUnitTime
+        this.signalBuffer = [];
+        this.lastOffTime = 0;
+        this.lastSignalTime = 0;
+        this.currentMorsePattern = '';
+        this.decodedText = '';
+
+        console.log(`[Decoder ${this.id}] Initialized. Initial unitTime: ${this.unitTime.toFixed(2)}ms`);
+    }
+
+    setUnitTime(newUnitTime) {
+        const oldUnitTime = this.unitTime;
+        this.unitTime = Math.max(20, newUnitTime); // Ensure it's not too small (e.g., min 20ms)
+        // Optional: Reset signalBuffer if unitTime is manually changed,
+        // as old buffer elements were based on a different unitTime.
+        // this.signalBuffer = []; 
+        console.log(`[Decoder ${this.id}] setUnitTime: unitTime manually updated to ${this.unitTime.toFixed(2)}ms from ${oldUnitTime.toFixed(2)}ms.`);
+    }
+
+    reset() {
         this.MAX_SIGNAL_HISTORY = 20;
         this.DIT_DAH_RATIO_THRESHOLD = 2;
         this.INTER_ELEMENT_SPACE_RATIO = 0.7;
@@ -42,11 +71,11 @@ export class MorseDecoder {
         this.reset();
         this.signalBuffer = []; // Stores recent signal (on-time) durations
         this.lastOffTime = 0; // Duration of the last off-period (silence)
-        this.unitTime = 100; // ms - initial guess for a dit duration, will be dynamically adjusted
+        // this.unitTime = 100; // ms - initial guess for a dit duration, will be dynamically adjusted -> Now set by initialUnitTime
         this.lastSignalTime = 0; // Timestamp of the last signal edge (on or off)
-        this.id = Math.random().toString(36).substring(2, 7); // Simple ID for multiple decoders if ever
+        // this.id = Math.random().toString(36).substring(2, 7); // Simple ID for multiple decoders if ever -> Moved up
         this.MIN_SIGNALS_FOR_UNIT_TIME_UPDATE = 5;
-        console.log(`[Decoder ${this.id}] Initialized. unitTime: ${this.unitTime}`);
+        // console.log(`[Decoder ${this.id}] Initialized. unitTime: ${this.unitTime}`); -> Moved up and changed
     }
 
     reset() {

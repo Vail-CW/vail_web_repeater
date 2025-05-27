@@ -80,45 +80,6 @@ class VailClient {
 		initLog("Setting up input methods")
 		this.inputs = new Inputs.Collection(this)
 
-		// Initialize Morse Decoder and related properties FIRST
-		initLog("Initializing Morse Decoder"); 
-		this.decoderOutputElement = document.querySelector("#decoder-output");
-		this.morseDecoder = new MorseDecoder((char) => {
-			this.updateDecodedOutput(char);
-		});
-		this.lastReceiveTime = 0; // To keep track of the end time of the last received signal portion
-		this.lastSignalTime = Date.now(); // Initial reference for first silence calculation
-		this.decodingTimeout = null; // For forceDecode timeout
-
-		// Decoder Output Toggle
-		this.toggleDecoderButton = document.querySelector("#toggle-decoder-output");
-		this.decoderOutputIcon = this.toggleDecoderButton.querySelector("i"); // Get the icon element
-
-		let decoderVisible = localStorage.getItem('decoderVisible') !== 'false'; // Default to true if not set
-
-		const updateDecoderVisibility = (visible) => {
-			if (visible) {
-				this.decoderOutputElement.classList.remove('is-hidden');
-				this.decoderOutputIcon.classList.remove('mdi-eye-off');
-				this.decoderOutputIcon.classList.add('mdi-eye');
-				this.toggleDecoderButton.setAttribute('title', 'Hide decoded output');
-			} else {
-				this.decoderOutputElement.classList.add('is-hidden');
-				this.decoderOutputIcon.classList.remove('mdi-eye');
-				this.decoderOutputIcon.classList.add('mdi-eye-off');
-				this.toggleDecoderButton.setAttribute('title', 'Show decoded output');
-			}
-		};
-		updateDecoderVisibility(decoderVisible); // Apply initial state
-
-		this.toggleDecoderButton.addEventListener('click', () => {
-			let currentVisibility = !this.decoderOutputElement.classList.contains('is-hidden');
-			decoderVisible = !currentVisibility; // New state
-			updateDecoderVisibility(decoderVisible);
-			localStorage.setItem('decoderVisible', decoderVisible);
-		});
-
-
 		initLog("Listening on AudioContext")
 		document.body.addEventListener(
 			"click",
@@ -145,6 +106,11 @@ class VailClient {
 			this.keyer.SetDitDuration(this.ditDuration)
 			this.roboKeyer.SetDitDuration(this.ditDuration)
 			this.inputs.SetDitDuration(this.ditDuration)
+
+          // Add this line to update the decoder
+          if (this.morseDecoder) {
+              this.morseDecoder.setUnitTime(this.ditDuration);
+          }
 		})
 		this.inputInit("#rx-delay", e => { 
 			this.rxDelay = e.target.value * time.Second
@@ -176,6 +142,53 @@ class VailClient {
 			this.setTelegraphBuzzer(e.target.checked)
 		})
 		this.inputInit("#notes")
+
+		// Initialize Morse Decoder and related properties AFTER inputInit for keyer-rate
+		initLog("Initializing Morse Decoder");
+		this.decoderOutputElement = document.querySelector("#decoder-output");
+		
+		// Ensure keyer-rate's initial 'input' event has fired to set this.ditDuration
+		// The inputInit for keyer-rate should have run and set this.ditDuration
+		// If this.ditDuration is not yet set, provide a fallback or ensure init order.
+		// For safety, check if this.ditDuration is set, or use a default.
+		const initialDecoderUnitTime = this.ditDuration || 100; // 100ms if ditDuration somehow not set yet
+		
+		this.morseDecoder = new MorseDecoder((char) => {
+			this.updateDecodedOutput(char);
+		}, initialDecoderUnitTime); // Pass initial unit time
+		console.log(`[VailClient] Initialized MorseDecoder with unitTime: ${initialDecoderUnitTime.toFixed(2)}ms`);
+
+		this.lastReceiveTime = 0; // To keep track of the end time of the last received signal portion
+		this.lastSignalTime = Date.now(); // Initial reference for first silence calculation
+		this.decodingTimeout = null; // For forceDecode timeout
+
+		// Decoder Output Toggle (depends on decoderOutputElement being set)
+		this.toggleDecoderButton = document.querySelector("#toggle-decoder-output");
+		this.decoderOutputIcon = this.toggleDecoderButton.querySelector("i"); // Get the icon element
+
+		let decoderVisible = localStorage.getItem('decoderVisible') !== 'false'; // Default to true if not set
+
+		const updateDecoderVisibility = (visible) => {
+			if (visible) {
+				this.decoderOutputElement.classList.remove('is-hidden');
+				this.decoderOutputIcon.classList.remove('mdi-eye-off');
+				this.decoderOutputIcon.classList.add('mdi-eye');
+				this.toggleDecoderButton.setAttribute('title', 'Hide decoded output');
+			} else {
+				this.decoderOutputElement.classList.add('is-hidden');
+				this.decoderOutputIcon.classList.remove('mdi-eye');
+				this.decoderOutputIcon.classList.add('mdi-eye-off');
+				this.toggleDecoderButton.setAttribute('title', 'Show decoded output');
+			}
+		};
+		updateDecoderVisibility(decoderVisible); // Apply initial state
+
+		this.toggleDecoderButton.addEventListener('click', () => {
+			let currentVisibility = !this.decoderOutputElement.classList.contains('is-hidden');
+			decoderVisible = !currentVisibility; // New state
+			updateDecoderVisibility(decoderVisible);
+			localStorage.setItem('decoderVisible', decoderVisible);
+		});
 
 		initLog("Filling in repeater name")
 		document.querySelector("#repeater").addEventListener("change", e => this.setRepeater(e.target.value.trim()))
