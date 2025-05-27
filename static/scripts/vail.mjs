@@ -248,12 +248,24 @@ class VailClient {
 	 * 
 	 * Called from the keyer.
 	 */
-	 BeginTx() {
-		this.beginTxTime = Date.now()
-		this.outputs.Buzz(true)
-		if (this.txChart) this.txChart.Set(1)
+	BeginTx() {
+       const now = Date.now();
+       if (!this.beginTxTime) { 
+            this.beginTxTime = now;
+       }
+       this.outputs.Buzz(true);
 
-	}
+       if (this.decodingTimeout) {
+           clearTimeout(this.decodingTimeout);
+           this.decodingTimeout = null;
+       }
+       if (this.morseDecoder) {
+           this.morseDecoder.signalStart(now);
+       }
+       this.lastSignalTime = now; 
+
+       if (this.txChart) this.txChart.Set(1);
+   }
 
 	/**
 	 * Stop the side tone buzzer, and send out how long it was active.
@@ -261,21 +273,56 @@ class VailClient {
 	 * Called from the keyer
 	 */
 	EndTx() {
-		if (!this.beginTxTime) {
-			return
-		}
-		let endTxTime = Date.now()
-		let duration = endTxTime - this.beginTxTime
-		this.outputs.Silence(true)
-		if (this.repeater) { // Add this check
-			this.repeater.Transmit(this.beginTxTime, duration)
-		} else {
-			console.warn("EndTx called but repeater is not initialized. Transmission ignored.");
-		}
-		this.beginTxTime = null
-		if (this.txChart) this.txChart.Set(0)
-	}
+       if (!this.beginTxTime) {
+           return;
+       }
+       const now = Date.now();
+       let duration = now - this.beginTxTime; 
+       
+       this.outputs.Silence(true);
+       if (this.repeater) {
+           this.repeater.Transmit(this.beginTxTime, duration);
+       } else {
+           console.warn("EndTx called but repeater is not initialized. Transmission ignored.");
+       }
+       
+       if (this.morseDecoder) {
+           this.morseDecoder.signalEnd(now);
+       }
+       this.lastSignalTime = now;
+       this.resetDecodingTimeout(); 
 
+       this.beginTxTime = null; 
+       if (this.txChart) this.txChart.Set(0);
+   }
+
+	resetDecodingTimeout() {
+       if (this.decodingTimeout) {
+           clearTimeout(this.decodingTimeout);
+           this.decodingTimeout = null;
+       }
+       if (this.morseDecoder && this.morseDecoder.unitTime > 0 && this.morseDecoder.MEDIUM_SPACE_RATIO > 0) {
+           this.decodingTimeout = setTimeout(() => {
+               if (this.morseDecoder) {
+                   const currentTime = Date.now();
+                   this.morseDecoder.signalStart(this.lastSignalTime || (currentTime - (this.morseDecoder.unitTime * (this.morseDecoder.MEDIUM_SPACE_RATIO + 1))));
+                   this.morseDecoder.signalEnd(currentTime);
+                   this.morseDecoder.forceDecode();
+                   this.lastSignalTime = currentTime;
+               }
+           }, this.morseDecoder.unitTime * (this.morseDecoder.MEDIUM_SPACE_RATIO + 2));
+       } else if (this.morseDecoder) {
+            this.decodingTimeout = setTimeout(() => {
+                 if (this.morseDecoder) {
+                    const currentTime = Date.now();
+                    this.morseDecoder.signalStart(this.lastSignalTime || (currentTime - 1000));
+                    this.morseDecoder.signalEnd(currentTime);
+                    this.morseDecoder.forceDecode();
+                    this.lastSignalTime = currentTime;
+                 }
+            }, 1000);
+       }
+   }
 
 	/**
 	 * Toggle timing charts.
@@ -462,6 +509,10 @@ class VailClient {
 		const effectiveWhen = when + this.rxDelay; // 'when' is the server's idea of start time
 
 		if (duration > 0) { // It's a tone
+			if (this.decodingTimeout) {
+				clearTimeout(this.decodingTimeout);
+				this.decodingTimeout = null;
+			}
 			if (effectiveWhen < now) {
 				console.warn("Too old", effectiveWhen, duration);
 				this.error("Packet requested playback " + (now - effectiveWhen) + "ms in the past. Increase receive delay!");
@@ -530,20 +581,7 @@ class VailClient {
 		this.updateReading("#suggested-delay-value", suggestedDelay);
 		this.updateReading("#clock-off-value", this.clockOffset);
 
-		// Add a timeout to force decode if no signals are received for a while
-		if (this.decodingTimeout) {
-			clearTimeout(this.decodingTimeout);
-		}
-		this.decodingTimeout = setTimeout(() => {
-			if (this.morseDecoder) {
-				// Simulate a signalStart far enough in the past and signalEnd now to process final silence.
-                // This ensures the last silence period is correctly processed by the decoder.
-                this.morseDecoder.signalStart(this.lastSignalTime);
-                this.morseDecoder.signalEnd(Date.now());
-				this.morseDecoder.forceDecode();
-                this.lastSignalTime = Date.now(); // Update for next potential silence period
-			}
-		}, this.morseDecoder.unitTime * (this.morseDecoder.MEDIUM_SPACE_RATIO + 2));
+		this.resetDecodingTimeout();
 	}
 
 	/**
