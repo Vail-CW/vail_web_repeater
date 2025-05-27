@@ -527,85 +527,70 @@ class VailClient {
 	 * @param {dict} stats Stuff the repeater class would like us to know about
 	 */
 	receive(when, duration, stats) {
-		this.clockOffset = stats.clockOffset || "?";
-		let now = Date.now();
-		const effectiveWhen = when + this.rxDelay; // 'when' is the server's idea of start time
+    this.clockOffset = stats.clockOffset || "?";
+    const now = Date.now(); // Current time for checks like "too old"
+    const effectiveWhen = when + this.rxDelay;
 
-		if (duration > 0) { // It's a tone
-			if (this.decodingTimeout) {
-				clearTimeout(this.decodingTimeout);
-				this.decodingTimeout = null;
-			}
-			if (effectiveWhen < now) {
-				console.warn("Too old", effectiveWhen, duration);
-				this.error("Packet requested playback " + (now - effectiveWhen) + "ms in the past. Increase receive delay!");
-				// Even if too old for audio, try to decode? Or skip? For now, let's try.
-			}
+    if (this.decodingTimeout) {
+        clearTimeout(this.decodingTimeout);
+        this.decodingTimeout = null;
+    }
 
-			// Simulate silence before this signal if there was a gap
-			if (this.lastReceiveTime > 0 && effectiveWhen > this.lastReceiveTime) {
-				// Vail uses a conceptual "signal start" then "signal end" for the decoder.
-				// The decoder's signalStart uses the provided time to mark the end of a preceding silence.
-				this.morseDecoder.signalStart(this.lastReceiveTime); 
-				// The decoder's signalEnd uses the provided time to mark the start of an ON signal,
-				// thus calculating the duration of the preceding silence.
-				this.morseDecoder.signalEnd(effectiveWhen); 
-			} else if (this.lastReceiveTime === 0 && effectiveWhen > this.lastSignalTime) {
-				// Potentially first signal after some silence not explicitly captured by lastReceiveTime
-				// This handles the silence from app start or after a long inactivity before the very first received signal.
-				this.morseDecoder.signalStart(this.lastSignalTime); 
-				this.morseDecoder.signalEnd(effectiveWhen);
-			}
+    if (effectiveWhen < (now - 20000) && when !== 0) { // Allow when=0 for notices, 20s arbitrary cutoff
+        console.warn(`[VailClient.receive] Stale signal received. Effective time: ${effectiveWhen}, Current time: ${now}. Difference: ${now - effectiveWhen}ms. Ignoring.`);
+        // Do not process stale signals further to prevent decoder confusion, but still reset timeout later.
+    } else {
+        if (effectiveWhen < now && when !== 0) { // Still log if slightly old for audio, but process for decoder
+            console.warn(`[VailClient.receive] Old signal for audio. Effective time: ${effectiveWhen}, Current time: ${now}. Difference: ${now - effectiveWhen}ms.`);
+            // Not calling this.error() here anymore to let decoder attempt processing.
+        }
 
+        // Let decoder.signalStart handle the silence duration before this event.
+        // effectiveWhen is the timestamp of the beginning of the potential mark or the time of a notice.
+        if (this.morseDecoder) {
+            this.morseDecoder.signalStart(effectiveWhen);
+        }
 
-			this.morseDecoder.signalStart(effectiveWhen); // Start of the actual ON signal
-			this.morseDecoder.signalEnd(effectiveWhen + duration); // End of the ON signal
-			this.lastSignalTime = effectiveWhen + duration; // Update lastSignalTime for next silence calc
-
-			this.BuzzDuration(false, effectiveWhen, duration); // Existing audio playback
-
-			this.lastReceiveTime = effectiveWhen + duration; // Update the time of the end of this signal part
-
-			this.rxDurations.unshift(duration);
-			this.rxDurations.splice(20, 2);
-		} else { // It's a silence indication or metadata-only packet
-			// If duration is 0, it might imply an explicit end or just no tone.
-			// We rely on the implicit silence between calls to receive and the timeout.
-			// Update lastSignalTime if this implies a longer silence than previously recorded by an ON signal
-            if (effectiveWhen > this.lastSignalTime) {
-                 // This ensures that if we get a metadata packet after a period of silence,
-                 // the decoder can correctly process that silence when the next actual ON signal arrives.
-                this.morseDecoder.signalStart(this.lastSignalTime);
-                this.morseDecoder.signalEnd(effectiveWhen);
-                this.lastSignalTime = effectiveWhen;
+        if (duration > 0) { // It's a mark (tone)
+            if (this.morseDecoder) {
+                this.morseDecoder.signalEnd(effectiveWhen + duration);
             }
-		}
+            this.lastSignalTime = effectiveWhen + duration; // Update VailClient's lastSignalTime
 
+            this.BuzzDuration(false, effectiveWhen, duration); // Audio playback
 
-		if (stats.notice) {
-			toast(stats.notice);
-		}
+            this.rxDurations.unshift(duration); // For stats
+            this.rxDurations.splice(20, 2);
+            this.lastReceiveTime = effectiveWhen + duration; // Legacy tracking, might be redundant with lastSignalTime now
+        } else { // It's a notice or non-mark event (duration == 0)
+            this.lastSignalTime = effectiveWhen; // Update VailClient's lastSignalTime to the time of the notice
+             // No mark to process with signalEnd. The preceding silence up to effectiveWhen was handled by signalStart.
+        }
+    }
 
-		let averageLag = (stats.averageLag || 0).toFixed(2);
-		let longestRxDuration = 0;
-		if (this.rxDurations.length > 0) {
-			longestRxDuration = this.rxDurations.reduce((a, b) => Math.max(a, b));
-		}
-		// Corrected suggestedDelay calculation if this.rxDurations can be empty
-		let suggestedDelay = ((parseFloat(averageLag) + longestRxDuration) * 1.2).toFixed(0);
+    if (stats.notice) {
+        toast(stats.notice);
+    }
 
+    // Stats updates (averageLag, longestRxDuration, etc.)
+    let averageLag = (stats.averageLag || 0).toFixed(2);
+    let longestRxDuration = 0;
+    if (this.rxDurations.length > 0) {
+        longestRxDuration = this.rxDurations.reduce((a, b) => Math.max(a, b));
+    }
+    let suggestedDelay = ((parseFloat(averageLag) + longestRxDuration) * 1.2).toFixed(0);
 
-		if (stats.connected !== undefined) {
-			this.outputs.SetConnected(stats.connected);
-		}
-		this.updateReading("#note", stats.note || stats.clients || "😎");
-		this.updateReading("#lag-value", averageLag);
-		this.updateReading("#longest-rx-value", longestRxDuration);
-		this.updateReading("#suggested-delay-value", suggestedDelay);
-		this.updateReading("#clock-off-value", this.clockOffset);
+    if (stats.connected !== undefined) {
+        this.outputs.SetConnected(stats.connected);
+    }
+    this.updateReading("#note", stats.note || stats.clients || "😎");
+    this.updateReading("#lag-value", averageLag);
+    this.updateReading("#longest-rx-value", longestRxDuration);
+    this.updateReading("#suggested-delay-value", suggestedDelay);
+    this.updateReading("#clock-off-value", this.clockOffset);
 
-		this.resetDecodingTimeout();
-	}
+    this.resetDecodingTimeout(); // Schedule forceDecode for end of transmission
+}
 
 	/**
 	 * Update an element with a value, if that element exists
