@@ -1,11 +1,22 @@
-FROM golang:1.22.3-bookworm AS builder
+# --- Builder Stage ---
+ARG GO_VERSION=1
+FROM golang:${GO_VERSION}-bookworm as builder
 
-COPY . /src
-COPY static /target/static
-WORKDIR /src
-RUN CGO_ENABLED=0 GOOS=linux go install -a -ldflags '-extldflags "-static"' ./...
-RUN cp -r /go/bin /target
+WORKDIR /usr/src/app
 
-FROM scratch
-COPY --from=builder /target /
-ENTRYPOINT [ "/bin/vail" ]
+COPY go.mod go.sum ./
+RUN go mod download && go mod verify
+
+COPY . .
+
+RUN go build -v -o /run-app ./cmd/vail
+
+# --- Final Stage ---
+FROM debian:bookworm-slim
+
+WORKDIR /app
+
+COPY --from=builder /usr/src/app/static ./static
+COPY --from=builder /run-app .
+
+CMD ["/app/run-app"]
