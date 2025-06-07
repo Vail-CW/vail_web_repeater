@@ -143,6 +143,39 @@ class VailClient {
 		})
 		this.inputInit("#notes")
 
+		// ---- START: Add new logic here ----
+		const ditKeyInput = document.querySelector("#dit-key-input");
+		const dahKeyInput = document.querySelector("#dah-key-input");
+
+		if (ditKeyInput) {
+			ditKeyInput.placeholder = "Click and press a key for DIT";
+			ditKeyInput.addEventListener("keydown", (event) => {
+				event.preventDefault();
+				event.stopPropagation();
+				const keyCode = event.keyCode;
+				ditKeyInput.value = event.key;
+				if (this.inputs && this.inputs.midi) {
+					this.inputs.midi.sendKeyBinding(3, keyCode);
+				}
+				ditKeyInput.blur(); // Remove focus after setting
+			});
+		}
+
+		if (dahKeyInput) {
+			dahKeyInput.placeholder = "Click and press a key for DAH";
+			dahKeyInput.addEventListener("keydown", (event) => {
+				event.preventDefault();
+				event.stopPropagation();
+				const keyCode = event.keyCode;
+				dahKeyInput.value = event.key;
+				if (this.inputs && this.inputs.midi) {
+					this.inputs.midi.sendKeyBinding(4, keyCode);
+				}
+				dahKeyInput.blur(); // Remove focus after setting
+			});
+		}
+		// ---- END: Add new logic here ----
+
 		// Initialize Morse Decoder and related properties AFTER inputInit for keyer-rate
 		initLog("Initializing Morse Decoder");
 		this.decoderOutputElement = document.querySelector("#decoder-output");

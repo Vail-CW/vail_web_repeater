@@ -211,7 +211,15 @@ export class MIDI extends Input{
 		}
 
 
-	}	
+	}
+
+	sendKeyBinding(controllerNumber, keyCode) {
+		if (this.midiAccess && this.midiAccess.outputs) {
+			for (let output of this.midiAccess.outputs.values()) {
+				output.send([0xB0, controllerNumber, keyCode]);
+			}
+		}
+	}
 }
 
 export class Gamepad extends Input{
