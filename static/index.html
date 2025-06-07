@@ -10,14 +10,9 @@
 		<meta property="og:title" content="Vail: Internet Morse Code">
 		<meta property="og:description" content="Send and recieve with just a computer or smartphone">
 		<meta property="og:image" content="https://vail.woozle.org/key.jpg">
-		<!-- Image from https://www.flickr.com/photos/nationalmuseumofamericanhistory/14448709921
-			-- Used with permission (CC-BY-NC) -->
-
-		<!-- Bulma CSS -->
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@6.5.95/css/materialdesignicons.min.css">
 
-		<!-- Vail stuff -->
 		<link rel="manifest" href="manifest.json">
 		<link rel="icon" href="assets/vail.png" data-rx="assets/vail-rx.png" sizes="256x256" type="image/png">
 		<link rel="icon" href="assets/vail.svg" data-rx="assets/vail-rx.svg" sizes="any" type="image/svg+xml">
@@ -83,7 +78,6 @@
 							</div>
 							<div class="level-right">
 								<div class="level-item">
-									<!-- This appears as a little light that turns on when someone's sending -->
 									<span class="tag recv-lamp">
 										<output class="has-text-info" id="note"></output>
 										<i class="mdi mdi-volume-off muted"></i>
@@ -129,24 +123,6 @@
 								<canvas class="chart" id="key0Chart" data-color="olive"></canvas>
 								<canvas class="chart" id="key1Chart" data-color="purple"></canvas>
 							</div>
-						</div>
-
-						<div class="block" id="decoder-output-container">
-							<div class="level is-mobile">
-								<div class="level-left">
-									<div class="level-item">
-										<label for="decoder-output" class="label" data-i18n="heading.decoderOutput">Decoded Output</label>
-									</div>
-								</div>
-								<div class="level-right">
-									<div class="level-item">
-										<button class="button is-small" id="toggle-decoder-output" title="Toggle visibility">
-											<span class="icon is-small"><i class="mdi mdi-eye"></i></span>
-										</button>
-									</div>
-								</div>
-							</div>
-							<div id="decoder-output" class="decoded-text-area"></div>
 						</div>
 
 						<div class="block">
@@ -364,6 +340,32 @@
 							</div>
 						</div>
 
+						<div class="field is-horizontal">
+							<div class="field-label">
+								<label class="label">Dit Key</label>
+							</div>
+							<div class="field-body">
+								<div class="field">
+									<div class="control">
+										<input class="input" type="text" id="dit-key-input" readonly>
+									</div>
+								</div>
+							</div>
+						</div>
+				
+						<div class="field is-horizontal">
+							<div class="field-label">
+								<label class="label">Dah Key</label>
+							</div>
+							<div class="field-body">
+								<div class="field">
+									<div class="control">
+										<input class="input" type="text" id="dah-key-input" readonly>
+									</div>
+								</div>
+							</div>
+						</div>
+
 						<datalist id="tones">
 							<option value="0" label="C-1"></option>
 							<option value="12" label="C0"></option>
@@ -418,4 +420,3 @@
 		</div>
 	</body>
 </html>
-<!-- vim: set noet ts=2 sw=2 : -->
