@@ -80,6 +80,22 @@ class VailClient {
 		initLog("Setting up input methods")
 		this.inputs = new Inputs.Collection(this)
 
+		const specialKeyMappings = {
+			"BracketLeft": 120,  // [
+			"BracketRight": 121, // ]
+			"Backslash": 122,    // \
+			"Slash": 123,        // /
+			"ShiftLeft": 124,
+			"ShiftRight": 125,
+			"ControlLeft": 126,  // Default Dit
+			"ControlRight": 127  // Default Dah
+		};
+		this.specialKeyMappings = specialKeyMappings; // Make it accessible via this if needed later
+
+		// Staging variables for "Save" button functionality
+		this.stagedDit = { code: "ControlLeft", key: "Control", midiValue: 126 }; // Default
+		this.stagedDah = { code: "ControlRight", key: "Control", midiValue: 127 }; // Default
+
 		initLog("Listening on AudioContext")
 		document.body.addEventListener(
 			"click",
@@ -143,38 +159,132 @@ class VailClient {
 		})
 		this.inputInit("#notes")
 
-		// ---- START: Add new logic here ----
+		// ---- START: Keybinding input logic ----
 		const ditKeyInput = document.querySelector("#dit-key-input");
 		const dahKeyInput = document.querySelector("#dah-key-input");
 
 		if (ditKeyInput) {
+			ditKeyInput.value = this.stagedDit.key;
 			ditKeyInput.placeholder = "Click and press a key for DIT";
+			// ditKeyInput.readOnly = true; // Optional: make field initially readonly
 			ditKeyInput.addEventListener("keydown", (event) => {
 				event.preventDefault();
 				event.stopPropagation();
+
 				const keyCode = event.keyCode;
-				ditKeyInput.value = event.key;
-				if (this.inputs && this.inputs.midi) {
-					this.inputs.midi.sendKeyBinding(3, keyCode);
+				const key = event.key;
+				const code = event.code;
+
+				let midiValueToSend;
+				let displayValue = key;
+
+				if (this.specialKeyMappings.hasOwnProperty(code)) {
+					midiValueToSend = this.specialKeyMappings[code];
+				} else {
+					midiValueToSend = keyCode;
 				}
-				ditKeyInput.blur(); // Remove focus after setting
+
+				if (midiValueToSend < 0 || midiValueToSend > 127) {
+					ditKeyInput.value = key + " (Not MIDI Bindable)";
+				} else {
+					ditKeyInput.value = displayValue;
+					this.stagedDit = { code: code, key: displayValue, midiValue: midiValueToSend };
+				}
+				ditKeyInput.blur();
 			});
 		}
 
 		if (dahKeyInput) {
+			dahKeyInput.value = this.stagedDah.key;
 			dahKeyInput.placeholder = "Click and press a key for DAH";
+			// dahKeyInput.readOnly = true; // Optional
 			dahKeyInput.addEventListener("keydown", (event) => {
 				event.preventDefault();
 				event.stopPropagation();
+
 				const keyCode = event.keyCode;
-				dahKeyInput.value = event.key;
-				if (this.inputs && this.inputs.midi) {
-					this.inputs.midi.sendKeyBinding(4, keyCode);
+				const key = event.key;
+				const code = event.code;
+
+				let midiValueToSend;
+				let displayValue = key;
+
+				if (this.specialKeyMappings.hasOwnProperty(code)) {
+					midiValueToSend = this.specialKeyMappings[code];
+				} else {
+					midiValueToSend = keyCode;
 				}
-				dahKeyInput.blur(); // Remove focus after setting
+
+				if (midiValueToSend < 0 || midiValueToSend > 127) {
+					dahKeyInput.value = key + " (Not MIDI Bindable)";
+				} else {
+					dahKeyInput.value = displayValue;
+					this.stagedDah = { code: code, key: displayValue, midiValue: midiValueToSend };
+				}
+				dahKeyInput.blur();
 			});
 		}
-		// ---- END: Add new logic here ----
+
+		const saveButton = document.querySelector("#save-keybindings-button");
+		if (saveButton) {
+			saveButton.addEventListener("click", () => {
+				if (this.inputs && this.inputs.midi) {
+					if (this.stagedDit && typeof this.stagedDit.midiValue !== 'undefined') {
+						this.inputs.midi.sendKeyBinding(3, this.stagedDit.midiValue);
+						// console.log("Attempted to save DIT:", this.stagedDit);
+					} else {
+						// console.warn("No staged DIT key to save or midiValue is undefined.");
+					}
+
+					if (this.stagedDah && typeof this.stagedDah.midiValue !== 'undefined') {
+						this.inputs.midi.sendKeyBinding(4, this.stagedDah.midiValue);
+						// console.log("Attempted to save DAH:", this.stagedDah);
+					} else {
+						// console.warn("No staged DAH key to save or midiValue is undefined.");
+					}
+					// toast("Key bindings sent to adapter.", 2000); // Example
+				} else {
+					// console.warn("MIDI system not available. Cannot save key bindings.");
+					// toast("MIDI system not available.", 3000);
+				}
+			});
+		}
+
+		const defaultsButton = document.querySelector("#defaults-keybindings-button");
+		if (defaultsButton) {
+			defaultsButton.addEventListener("click", () => {
+				const defaultDitCode = "ControlLeft";
+				const defaultDitKeyDisplay = "Control";
+				const defaultDitMidiValue = this.specialKeyMappings[defaultDitCode];
+
+				const defaultDahCode = "ControlRight";
+				const defaultDahKeyDisplay = "Control";
+				const defaultDahMidiValue = this.specialKeyMappings[defaultDahCode];
+
+				this.stagedDit = { code: defaultDitCode, key: defaultDitKeyDisplay, midiValue: defaultDitMidiValue };
+				this.stagedDah = { code: defaultDahCode, key: defaultDahKeyDisplay, midiValue: defaultDahMidiValue };
+
+				const ditKeyInput = document.querySelector("#dit-key-input");
+				const dahKeyInput = document.querySelector("#dah-key-input");
+				if (ditKeyInput) {
+					ditKeyInput.value = this.stagedDit.key;
+				}
+				if (dahKeyInput) {
+					dahKeyInput.value = this.stagedDah.key;
+				}
+
+				if (this.inputs && this.inputs.midi) {
+					this.inputs.midi.sendKeyBinding(3, this.stagedDit.midiValue);
+					this.inputs.midi.sendKeyBinding(4, this.stagedDah.midiValue);
+					// console.log("Defaults set and sent to adapter.");
+					// toast("Default key bindings restored and sent.", 2000);
+				} else {
+					// console.warn("MIDI system not available. Cannot send default key bindings.");
+					// toast("MIDI system not available. Defaults set locally.", 3000);
+				}
+			});
+		}
+		// ---- END: Keybinding input logic ----
 
 		// Initialize Morse Decoder and related properties AFTER inputInit for keyer-rate
 		initLog("Initializing Morse Decoder");

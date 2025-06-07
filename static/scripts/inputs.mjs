@@ -215,9 +215,17 @@ export class MIDI extends Input{
 
 	sendKeyBinding(controllerNumber, keyCode) {
 		if (this.midiAccess && this.midiAccess.outputs) {
-			for (let output of this.midiAccess.outputs.values()) {
-				output.send([0xB0, controllerNumber, keyCode]);
+			if (keyCode < 0 || keyCode > 127) {
+				console.warn(`Attempted to send MIDI key binding with invalid keyCode: ${keyCode}. Controller: ${controllerNumber}. Not sent.`);
+				return;
 			}
+			for (let output of this.midiAccess.outputs.values()) {
+				// MIDI Control Change 0xB0, controllerNumber, value
+				output.send([0xB0, controllerNumber, keyCode]);
+				// console.log(`Sent MIDI: B0 ${controllerNumber} ${keyCode} to ${output.name}`);
+			}
+		} else {
+			// console.warn("MIDI access or outputs not available for sendKeyBinding.");
 		}
 	}
 }
