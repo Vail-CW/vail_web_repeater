@@ -305,33 +305,47 @@ class VailClient {
 		this.lastSignalTime = Date.now(); // Initial reference for first silence calculation
 		this.decodingTimeout = null; // For forceDecode timeout
 
-		// Decoder Output Toggle (depends on decoderOutputElement being set)
+		// Decoder Output Toggle
 		this.toggleDecoderButton = document.querySelector("#toggle-decoder-output");
-		this.decoderOutputIcon = this.toggleDecoderButton.querySelector("i"); // Get the icon element
+		if (this.toggleDecoderButton) {
+			this.decoderOutputIcon = this.toggleDecoderButton.querySelector("i"); // Now safe
 
-		let decoderVisible = localStorage.getItem('decoderVisible') !== 'false'; // Default to true if not set
+			let decoderVisible = localStorage.getItem('decoderVisible') !== 'false';
 
-		const updateDecoderVisibility = (visible) => {
-			if (visible) {
-				this.decoderOutputElement.classList.remove('is-hidden');
-				this.decoderOutputIcon.classList.remove('mdi-eye-off');
-				this.decoderOutputIcon.classList.add('mdi-eye');
-				this.toggleDecoderButton.setAttribute('title', 'Hide decoded output');
-			} else {
-				this.decoderOutputElement.classList.add('is-hidden');
-				this.decoderOutputIcon.classList.remove('mdi-eye');
-				this.decoderOutputIcon.classList.add('mdi-eye-off');
-				this.toggleDecoderButton.setAttribute('title', 'Show decoded output');
-			}
-		};
-		updateDecoderVisibility(decoderVisible); // Apply initial state
+			const updateDecoderVisibility = (visible) => {
+				if (this.decoderOutputElement) { // Guard for decoderOutputElement
+					if (visible) {
+						this.decoderOutputElement.classList.remove('is-hidden');
+						if (this.decoderOutputIcon) { // Guard for decoderOutputIcon
+							this.decoderOutputIcon.classList.remove('mdi-eye-off');
+							this.decoderOutputIcon.classList.add('mdi-eye');
+						}
+						// toggleDecoderButton is known to be non-null here
+						this.toggleDecoderButton.setAttribute('title', 'Hide decoded output');
+					} else {
+						this.decoderOutputElement.classList.add('is-hidden');
+						if (this.decoderOutputIcon) { // Guard for decoderOutputIcon
+							this.decoderOutputIcon.classList.remove('mdi-eye');
+							this.decoderOutputIcon.classList.add('mdi-eye-off');
+						}
+						// toggleDecoderButton is known to be non-null here
+						this.toggleDecoderButton.setAttribute('title', 'Show decoded output');
+					}
+				}
+			};
+			updateDecoderVisibility(decoderVisible); // Safe to call if toggleDecoderButton exists
 
-		this.toggleDecoderButton.addEventListener('click', () => {
-			let currentVisibility = !this.decoderOutputElement.classList.contains('is-hidden');
-			decoderVisible = !currentVisibility; // New state
-			updateDecoderVisibility(decoderVisible);
-			localStorage.setItem('decoderVisible', decoderVisible);
-		});
+			this.toggleDecoderButton.addEventListener('click', () => {
+				// This listener is only added if toggleDecoderButton exists, so it's safe to use it here.
+				let currentVisibility = this.decoderOutputElement ? !this.decoderOutputElement.classList.contains('is-hidden') : false;
+				decoderVisible = !currentVisibility;
+				updateDecoderVisibility(decoderVisible);
+				localStorage.setItem('decoderVisible', decoderVisible);
+			});
+		} else {
+			console.warn("#toggle-decoder-output button not found. Decoder toggle UI will be disabled.");
+			this.decoderOutputIcon = null; // Ensure it's null if button not found
+		}
 
 		initLog("Filling in repeater name")
 		document.querySelector("#repeater").addEventListener("change", e => this.setRepeater(e.target.value.trim()))
@@ -565,7 +579,7 @@ class VailClient {
 	setRepeater(name) {
 		if (this.morseDecoder) {
 			this.morseDecoder.reset();
-			if (this.decoderOutputElement) {
+			if (this.decoderOutputElement) { // Guard already present from previous step, but good to confirm
 				this.decoderOutputElement.textContent = ''; // Clear UI
 			}
 		}
