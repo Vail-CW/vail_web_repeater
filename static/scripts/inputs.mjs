@@ -123,7 +123,12 @@ export class MIDI extends Input{
 		super(keyer)
 		this.ditDuration = 100
 		this.keyerMode = 0
-		
+		this.pressedKeys = {
+			straight: false,
+			dit: false,
+			dah: false
+		}
+
 		this.midiAccess = {outputs: []} // stub while we wait for async stuff
 		if (navigator.requestMIDIAccess) {
 			this.midiInit()
@@ -164,11 +169,39 @@ export class MIDI extends Input{
 		this.sendState()
 	}
 
+	releaseAllKeys() {
+		// Release any keys that are currently pressed
+		if (this.pressedKeys.straight) {
+			this.keyer.Straight(false)
+			this.pressedKeys.straight = false
+		}
+		if (this.pressedKeys.dit) {
+			this.keyer.Key(0, false)
+			this.pressedKeys.dit = false
+		}
+		if (this.pressedKeys.dah) {
+			this.keyer.Key(1, false)
+			this.pressedKeys.dah = false
+		}
+	}
+
 	midiStateChange(event) {
+		// Check if any previously connected devices have been disconnected
+		let currentInputs = Array.from(this.midiAccess.inputs.values())
+		for (let oldInput of this.inputs) {
+			if (!currentInputs.includes(oldInput)) {
+				console.log("MIDI device disconnected, releasing all keys")
+				this.releaseAllKeys()
+			}
+		}
+
 		// Go through this.midiAccess.inputs and only listen on new things
+		this.inputs = []
 		for (let input of this.midiAccess.inputs.values()) {
-			if (!this.inputs.includes(input)) {
-				input.addEventListener("midimessage", e => this.midiMessage(e))
+			if (input.state === "connected") {
+				if (!this.inputs.includes(input)) {
+					input.addEventListener("midimessage", e => this.midiMessage(e))
+				}
 				this.inputs.push(input)
 			}
 		}
@@ -194,17 +227,39 @@ export class MIDI extends Input{
 				return
 		}
 
+		// If adapter is running a keyer (mode > 1), treat all messages as straight key
+		// This prevents double-keying: adapter does keying, browser just passes through
+		// Mode 1 = straight/cootie (pass-through), modes 2-9 = bug/iambic/ultimatic/etc (keyed)
+		let adapterIsKeying = this.keyerMode > 1
+
 		switch (data[1]) {
-			case 0: // Vail Adapter
+			case 0: // Vail Adapter - Straight key
 				this.keyer.Straight(begin)
+				this.pressedKeys.straight = begin
 				break
-			case 1: // Vail Adapter
-			case 20: // N6ARA TinyMIDI
-				this.keyer.Key(0, begin)
+			case 1: // Vail Adapter - Dit
+			case 20: // N6ARA TinyMIDI - Dit
+				if (adapterIsKeying) {
+					// Adapter is keying, treat as straight key output
+					this.keyer.Straight(begin)
+					this.pressedKeys.straight = begin
+				} else {
+					// Adapter is pass-through, apply browser's keyer logic
+					this.keyer.Key(0, begin)
+					this.pressedKeys.dit = begin
+				}
 				break
-			case 2: // Vail Adapter
-			case 21: // N6ARA TinyMIDI
-				this.keyer.Key(1, begin)
+			case 2: // Vail Adapter - Dah
+			case 21: // N6ARA TinyMIDI - Dah
+				if (adapterIsKeying) {
+					// Adapter is keying, treat as straight key output
+					this.keyer.Straight(begin)
+					this.pressedKeys.straight = begin
+				} else {
+					// Adapter is pass-through, apply browser's keyer logic
+					this.keyer.Key(1, begin)
+					this.pressedKeys.dah = begin
+				}
 				break
 			default:
 				return

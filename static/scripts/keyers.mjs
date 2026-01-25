@@ -79,6 +79,18 @@ class StraightKeyer {
 	 Reset() {
 		this.output.EndTx()
 		this.txRelays = []
+		this.physicalKeysPressed = [] // Track actual physical key state (not relay pulses)
+		this.maxTxDuration = 10 * time.Second // Max 10 seconds continuous transmission
+		this.txStartTime = null
+		this.keyingStartTime = null
+		if (this.txSafetyTimeout) {
+			clearTimeout(this.txSafetyTimeout)
+			this.txSafetyTimeout = null
+		}
+		if (this.keyingSafetyTimeout) {
+			clearTimeout(this.keyingSafetyTimeout)
+			this.keyingSafetyTimeout = null
+		}
 	}
 
 	/**
@@ -93,7 +105,16 @@ class StraightKeyer {
 	/**
 	 * Clean up all timers, etc.
 	 */
-	 Release() {}
+	 Release() {
+		if (this.txSafetyTimeout) {
+			clearTimeout(this.txSafetyTimeout)
+			this.txSafetyTimeout = null
+		}
+		if (this.keyingSafetyTimeout) {
+			clearTimeout(this.keyingSafetyTimeout)
+			this.keyingSafetyTimeout = null
+		}
+	}
 
 	/**
 	 * Returns the state of a single transmit relay.
@@ -108,6 +129,55 @@ class StraightKeyer {
 			return this.txRelays.some(Boolean)
 		}
 		return this.txRelays[n]
+	}
+
+	/**
+	 * Track physical key press/release for safety timeout
+	 * This is separate from Tx() because keyers like Bug pulse rapidly
+	 *
+	 * @param {number} key Key number
+	 * @param {bool} pressed True if key is pressed
+	 */
+	TrackPhysicalKey(key, pressed) {
+		this.physicalKeysPressed[key] = pressed
+
+		if (pressed) {
+			// A physical key is pressed
+			if (!this.keyingStartTime) {
+				// First key pressed, start the safety timeout
+				this.keyingStartTime = Date.now()
+				this.keyingSafetyTimeout = setTimeout(() => {
+					console.warn("Stuck key detected - force releasing and disabling break-in")
+					// Force release all physical keys
+					for (let i = 0; i < this.physicalKeysPressed.length; i++) {
+						this.physicalKeysPressed[i] = false
+					}
+					// Force release all relays
+					for (let i = 0; i < this.txRelays.length; i++) {
+						this.txRelays[i] = false
+					}
+					this.output.EndTx()
+
+					// Disable break-in and notify user
+					if (this.output.DisableBreakInForStuckKey) {
+						this.output.DisableBreakInForStuckKey()
+					}
+
+					this.keyingStartTime = null
+					this.keyingSafetyTimeout = null
+				}, this.maxTxDuration)
+			}
+		} else {
+			// A physical key is released - check if all keys are now released
+			if (!this.physicalKeysPressed.some(Boolean)) {
+				// All physical keys released, clear the keying timeout
+				if (this.keyingSafetyTimeout) {
+					clearTimeout(this.keyingSafetyTimeout)
+					this.keyingSafetyTimeout = null
+				}
+				this.keyingStartTime = null
+			}
+		}
 	}
 
 	/**
@@ -128,9 +198,13 @@ class StraightKeyer {
 
 		if (wasClosed != nowClosed) {
 			if (nowClosed) {
+				// Starting transmission
 				this.output.BeginTx()
+				this.txStartTime = Date.now()
 			} else {
+				// Ending transmission
 				this.output.EndTx()
+				this.txStartTime = null
 			}
 		}
 	}
@@ -142,6 +216,7 @@ class StraightKeyer {
 	 * @param {bool} pressed True if the key was pressed
 	 */
 	 Key(key, pressed) {
+		 this.TrackPhysicalKey(key, pressed)
 		 this.Tx(key, pressed)
 	}
 }
@@ -178,10 +253,13 @@ class BugKeyer extends StraightKeyer {
 
 	Key(key, pressed) {
 		this.keyPressed[key] = pressed
+		// Track physical key for safety timeout
+		this.TrackPhysicalKey(key, pressed)
 		if (key == 0) {
 			this.beginPulsing()
 		} else {
-			super.Key(key, pressed)
+			// For key 1, also call parent's Tx logic
+			this.Tx(key, pressed)
 		}
 	}
 
@@ -231,7 +309,9 @@ class ElBugKeyer extends BugKeyer {
 
 	Key(key, pressed) {
 		this.keyPressed[key] = pressed
-		if (pressed) {	
+		// Track physical key for safety timeout
+		this.TrackPhysicalKey(key, pressed)
+		if (pressed) {
 			this.nextRepeat = key
 		} else {
 			this.nextRepeat = this.keyPressed.findIndex(Boolean)

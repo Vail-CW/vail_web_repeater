@@ -29,9 +29,15 @@ class I18n {
     }
 
     lookup(key, dfl=null) {
+        if (!this.table) {
+            return dfl
+        }
         let obj = this.table
         for (let k of key.split(".")) {
             obj = obj[k]
+            if (!obj) {
+                return dfl
+            }
         }
         return obj || dfl
     }

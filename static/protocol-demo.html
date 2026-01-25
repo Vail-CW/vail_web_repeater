@@ -18,9 +18,10 @@ const Millisecond = 1
 const Second = 1000 * Millisecond
 
 class Vail extends EventTarget {
-	constructor(repeater, protocols=["json.vail.woozle.org"]) {
+	constructor(repeater, protocols=["json.vailmorse.com"]) {
 		super()
-		this.url = new URL("wss://vail.woozle.org/chat")
+		let wsProtocol = location.protocol === "https:" ? "wss:" : "ws:"
+		this.url = new URL(`${wsProtocol}//${location.host}/chat`)
 		this.url.searchParams.set("repeater", repeater)
 		this.protocols = protocols
 		this.transmitters = 0
@@ -37,10 +38,10 @@ class Vail extends EventTarget {
 		this.socket = new WebSocket(this.url, this.protocols)
 		this.socket.addEventListener("open", event => {
 			switch (this.socket.protocol) {
-			case "json.vail.woozle.org":
+			case "json.vailmorse.com":
 				this.socket.addEventListener("message", event => this.jsonMessage(event))
 				break
-			case "binary.vail.woozle.org":
+			case "binary.vailmorse.com":
 				this.socket.addEventListener("message", event => this.binaryMessage(event))
 				break
 			default:
@@ -84,8 +85,8 @@ function log(selector, text) {
 }
 
 function init(repeater) {
-	let cliJson = new Vail(repeater, ["json.vail.woozle.org"])
-	let cliBin = new Vail(repeater, ["binary.vail.woozle.org"])
+	let cliJson = new Vail(repeater, ["json.vailmorse.com"])
+	let cliBin = new Vail(repeater, ["binary.vailmorse.com"])
 }
 
 init("demo")

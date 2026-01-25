@@ -5,11 +5,11 @@
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 
-		<meta property="og:url" content="https://vail.woozle.org/">
+		<meta property="og:url" content="https://vailmorse.com/">
 		<meta property="og:type" content="website">
 		<meta property="og:title" content="Vail: Internet Morse Code">
-		<meta property="og:description" content="Send and recieve with just a computer or smartphone">
-		<meta property="og:image" content="https://vail.woozle.org/key.jpg">
+		<meta property="og:description" content="Practice Morse code with friends in real-time">
+		<meta property="og:image" content="https://vailmorse.com/assets/vail.png">
 		<!-- Image from https://www.flickr.com/photos/nationalmuseumofamericanhistory/14448709921
 			-- Used with permission (CC-BY-NC) -->
 
@@ -21,10 +21,10 @@
 		<link rel="manifest" href="manifest.json">
 		<link rel="icon" href="assets/vail.png" data-rx="assets/vail-rx.png" sizes="256x256" type="image/png">
 		<link rel="icon" href="assets/vail.svg" data-rx="assets/vail-rx.svg" sizes="any" type="image/svg+xml">
-		<script type="module" src="scripts/vail.mjs"></script>
-		<script type="module" src="scripts/ui.mjs"></script>
-		<link rel="stylesheet" href="vail.css">
-		<link rel="stylesheet" href="dark.css">
+		<script type="module" src="scripts/vail.mjs?v=1.3.0"></script>
+		<script type="module" src="scripts/ui.mjs?v=1.3.0"></script>
+		<link rel="stylesheet" href="vail.css?v=1.3.0">
+		<link rel="stylesheet" href="dark.css?v=1.3.0">
 	</head>
 	<body>
 		<nav class="navbar is-dark">
@@ -33,221 +33,49 @@
 					<img class="" src="assets/vail.svg" alt="">
 					<div class="block">Vail</div>
 				</a>
+				<a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" id="navbar-burger">
+					<span aria-hidden="true"></span>
+					<span aria-hidden="true"></span>
+					<span aria-hidden="true"></span>
+				</a>
 			</div>
-			<div class="navbar-menu">
-				<div class="navbar-end">
-					<a class="navbar-item" href="https://discord.gg/GBzj8cBat7" target="_blank" title="Text/voice chat on Discord"><i class="mdi mdi-discord"></i></a>
-					<a class="navbar-item" href="https://github.com/nealey/vail/wiki" target="_blank" title="Vail Wiki">Help</a>
-				</div>
-			</div>
-		</nav>
-
-		<div class="modal is-active init">
-			<div class="modal-content">
-				<div class="notification is-info">
-						<h1 class="title has-text-centered">
-							Loading...
-						</h1>
-						<p>
-							If you can read this,
-							it could mean
-							your browser has disabled JavaScript,
-							a browser extension is interfering with JavaScript,
-							or your browser is too old to run Vail.
-						</p>
-						<p>
-							Please post a screen shot in a new
-							<a href="https://github.com/nealey/vail/discussions">Vail Discussions</a>
-							thread,
-							or in our
-							<a href="https://discord.gg/GBzj8cBat7">Discord instance</a>,
-							so we can help you out!
-						</p>
-						<ul>
-							<li>Starting JavaScript application...</li>
-						</ul>
-					</div>
-				</div>
-			</div>
-		</div>
-
-		<section class="section">
-			<div class="columns is-multiline">
-				<div class="column">
-					<div class="box" id="transciever">
-						<div class="level">
-							<div class="level-left">
-								<div class="level-item">
-									<h1 class="title" data-i18n="heading.repeater">Repeater</h1>
-								</div>
-							</div>
-							<div class="level-right">
-								<div class="level-item">
-									<!-- This appears as a little light that turns on when someone's sending -->
-									<span class="tag recv-lamp">
-										<output class="has-text-info" id="note"></output>
-										<i class="mdi mdi-volume-off muted"></i>
-									</span>
-								</div>
-							</div>
-						</div>
-
-						<div class="block is-flex">
-							<input class="input" type="text" id="repeater" list="repeater-list">
-							<datalist id="repeater-list"></datalist>
-							<div class="dropdown is-right is-hoverable">
-								<div class="dropdown-trigger">
-									<button class="button" aria-haspopup="true" aria-controls="stock-repeaters">
-										<span class="icon is-small">
-											<i class="mdi mdi-chevron-down" aria-hidden="true"></i>
-										</span>
+			<div class="navbar-menu navbar-menu-centered" id="navbar-menu">
+				<div class="navbar-start"></div>
+				<div class="navbar-center">
+					<a class="navbar-item" href="events.html">
+						<span class="icon"><i class="mdi mdi-calendar-clock"></i></span>
+						<span>Events</span>
+					</a>
+					<a class="navbar-item" href="https://training.vailmorse.com">
+						<span class="icon"><i class="mdi mdi-school"></i></span>
+						<span>Training</span>
+						<span class="tag is-info is-light ml-2" style="font-size: 0.65rem; padding: 0.15rem 0.4rem;">BETA</span>
+					</a>
+					<a class="navbar-item" href="enigma-admin.html" id="enigma-admin-link" style="display: none;">
+						<span class="icon"><i class="mdi mdi-cog-box"></i></span>
+						<span>Enigma Admin</span>
+					</a>
+					<div class="navbar-item has-dropdown" id="settings-dropdown">
+						<a class="navbar-link" id="settings-toggle">
+							<span class="icon"><i class="mdi mdi-cog"></i></span>
+							<span>Settings</span>
+						</a>
+						<div class="navbar-dropdown is-right settings-dropdown-content" id="settings-content">
+							<div class="settings-dropdown-inner">
+								<div class="block">
+									<button id="reset" class="button is-warning is-light is-small is-fullwidth" data-i18n="label.reset">
+										Reset All Settings
 									</button>
+									<p class="help" data-i18n="description.reset">
+										Reset all Vail preferences to default.
+									</p>
 								</div>
-								<div class="dropdown-menu" id="stock-repeaters" role="menu">
-									<div class="dropdown-content">
-										<a class="dropdown-item" data-value="">General</a>
-										<a class="dropdown-item" data-value="1">Channel 1</a>
-										<a class="dropdown-item" data-value="2">Channel 2</a>
-										<a class="dropdown-item" data-value="3">Channel 3</a>
-										<hr class="dropdown-divider">
-										<a class="dropdown-item" data-value="Null">Null (no transmit)</a>
-										<a class="dropdown-item">Echo</a>
-										<a class="dropdown-item">Fortunes</a>
-										<a class="dropdown-item">Fortunes: Pauses ×2</a>
-										<a class="dropdown-item">Fortunes: Pauses ×4</a>
-										<a class="dropdown-item">Fortunes: Pauses ×8</a>
-									</div>
-								</div>
-							</div>
-						</div>
 
-
-						<div class="block">
-							<div class="" id="charts">
-								<canvas class="chart" id="rxChart" data-color="orange"></canvas>
-								<canvas class="chart" id="txChart" data-color="teal"></canvas>
-								<canvas class="chart" id="key0Chart" data-color="olive"></canvas>
-								<canvas class="chart" id="key1Chart" data-color="purple"></canvas>
-							</div>
-						</div>
-
-						<div class="block">
-							<table class="wide">
-								<tr>
-									<td>
-										<button class="button key is-primary" data-key="0" title="right click for Key">
-											Key
-										</button>
-										<div class="shortcuts">
-											<kbd title="keyboard button">.</kbd>
-											<kbd title="keyboard button">x</kbd>
-											<i class="mdi mdi-gamepad-circle-left" title="Gamepad Left Button"></i>
-										</div>
-									</td>
-									<td>
-										<button class="button key is-primary" data-key="1" title="right click for Key">
-											Key
-										</button>
-										<div class="shortcuts">
-											<kbd title="keyboard button">/</kbd>
-											<kbd title="keyboard button">z</kbd>
-											<i class="mdi mdi-gamepad-circle-up" title="Gamepad Top Button"></i>
-										</div>
-									</td>
-								</tr>
-							</table>
-						</div>
-
-						<div>
-							<div class="field is-horizontal">
-								<div class="field-label">
-									<label class="label" data-i18n="heading.mode">Mode</label>
-								</div>
-								<div class="field-body">
-									<div class="field">
-										<div class="control">
-											<div class="select">
-												<select id="keyer-mode">
-													<option value="cootie" data-i18n="keyer.cootie">Straight Key / Cootie</option>
-													<option value="bug" data-i18n="keyer.bug">Bug</option>
-													<option value="elbug" data-i18n="keyer.elbug">ElBug</option>
-													<option value="singledot" data-i18n="keyer.singledot">Single Dot</option>
-													<option value="ultimatic" data-i18n="keyer.ultimatic">Ultimatic</option>
-													<option value="iambic" data-i18n="keyer.iambic">Iambic (Plain)</option>
-													<option value="iambica" data-i18n="keyer.iambica">Iambic A</option>
-													<option value="iambicb" data-i18n="keyer.iambicb">Iambic B</option>
-													<option value="keyahead" data-i18n="keyer.keyahead">Keyahead</option>
-												</select>
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
-
-							<div class="field is-horizontal">
-								<div class="field-label">
-									<label class="label">
-										<output for="keyer-rate"></output>&nbsp;<span data-i18n="label.wpm">WPM</span>
-										/
-										<span data-fill="keyer-ms"></span><span data-i18n="label:ms">ms</span>
-									</label>
-								</div>
-								<div class="field-body">
-									<div class="field">
-										<div class="control">
-											<input
-												id="keyer-rate"
-												type="range"
-												min="5"
-												max="50"
-												step="1"
-												value="12">
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-
-					</div>
-				</div>
-
-				<div class="column">
-					<div class="box">
-						<h2 class="title" data-i18n="heading.notes" data-i18n="heading.notes"></h2>
-						<textarea class="textarea" data-i18n-placeholder="description.notes" id="notes"></textarea>
-						<nav class="breadcrumb has-bullet-separator">
-							<ul>
-								<li><a href="https://discord.gg/GBzj8cBat7" target="_blank" data-i18n-title="title.discord"><i class="mdi mdi-discord"></i></a></li>
-								<li><a href="https://github.com/nealey/vail/wiki" target="_blank" data-i18n-title="title.wiki">Help</a></li>
-							</ul>
-						</nav>
-					</div>
-				</div>
-
-				<div class="column">
-					<div class="box">
-						<h2 class="title" data-i18n="heading.knobs">Knobs</h2>
-						<div class="block">
-							<div class="control">
-								<button id="reset" class="button" data-i18n="label.reset">
-									Reset
-								</button>
-							</div>
-							<div data-i18n="description.reset">
-								Reset all Vail preferences to default.
-							</div>
-						</div>
-
-
-						<div class="field is-horizontal">
-							<div class="field-label">
-								<label class="label">
-									<span data-i18n="label.rx-delay">rx delay</span>:
-									<output for="rx-delay"></output>s
-								</label>
-							</div>
-							<div class="field-body">
 								<div class="field">
+									<label class="label is-small">
+										<span data-i18n="label.rx-delay">RX Delay</span>:
+										<output for="rx-delay"></output>s
+									</label>
 									<div class="control">
 										<input
 											id="rx-delay"
@@ -272,19 +100,13 @@
 										</datalist>
 									</div>
 								</div>
-							</div>
-						</div>
 
-						<div class="field is-horizontal">
-							<div class="field-label">
-								<label class="label">
-									<span data-i18n="label.gain">volume</span>:
-									<output for="masterGain"></output>%
-									<i class="mdi mdi-volume-off muted"></i>
-								</label>
-							</div>
-							<div class="field-body">
 								<div class="field">
+									<label class="label is-small">
+										<span data-i18n="label.gain">Volume</span>:
+										<output for="masterGain"></output>%
+										<i class="mdi mdi-volume-off muted"></i>
+									</label>
 									<div class="control">
 										<input
 											id="masterGain"
@@ -295,88 +117,34 @@
 											step="1">
 									</div>
 								</div>
-							</div>
-						</div>
-		
-						<div class="field is-horizontal">
-							<div class="field-label">
-								<label class="label">
-									<span data-i18n="label.tx-tone">tx tone</span>:
-									<output for="tx-tone" data-transform="note"></output>
-									<output for="tx-tone" data-transform="freq"></output>Hz
-								</label>
-							</div>
-							<div class="field-body">
+
+								<datalist id="tones">
+									<option value="0" label="C-1"></option>
+									<option value="12" label="C0"></option>
+									<option value="24" label="C1"></option>
+									<option value="36" label="C2"></option>
+									<option value="48" label="C3"></option>
+									<option value="60" label="C4"></option>
+									<option value="72" label="C5"></option>
+									<option value="84" label="C6"></option>
+									<option value="96" label="C7"></option>
+									<option value="108" label="C8"></option>
+									<option value="120" label="C9"></option>
+								</datalist>
+
 								<div class="field">
-									<div class="control">
-										<input
-											id="tx-tone"
-											type="range"
-											min="0"
-											max="127"
-											value="72"
-											step="1"
-											list="tones">
-									</div>
+									<label class="checkbox">
+										<input type="checkbox" id="telegraph-buzzer">
+										<span data-i18n="label.telegraph-sounds">Telegraph sounds</span>
+									</label>
 								</div>
-							</div>
-						</div>
 
-						<div class="field is-horizontal">
-							<div class="field-label">
-								<label class="label">
-									<span data-i18n="label.rx-tone">rx tone</span>:
-									<output for="rx-tone" data-transform="note"></output>
-									<output for="rx-tone" data-transform="freq"></output>Hz
-								</label>
-							</div>
-							<div class="field-body">
 								<div class="field">
-									<div class="control">
-										<input
-											id="rx-tone"
-											type="range"
-											min="0"
-											max="127"
-											value="69"
-											step="1"
-											list="tones">
-									</div>
-								</div>
-							</div>
-						</div>
-
-						<datalist id="tones">
-							<option value="0" label="C-1"></option>
-							<option value="12" label="C0"></option>
-							<option value="24" label="C1"></option>
-							<option value="36" label="C2"></option>
-							<option value="48" label="C3"></option>
-							<option value="60" label="C4"></option>
-							<option value="72" label="C5"></option>
-							<option value="84" label="C6"></option>
-							<option value="96" label="C7"></option>
-							<option value="108" label="C8"></option>
-							<option value="120" label="C9"></option>
-						</datalist>
-
-						<p>
-							<label class="checkbox">
-								<input type="checkbox" id="telegraph-buzzer">
-								<span data-i18n="label.telegraph-sounds">Telegraph sounds</span>
-							</label>
-						</p>
-
-						<div class="field is-horizontal">
-							<div class="field-label">
-								<label class="label">
-									<span data-i18n="label.gain">noise</span>:
-									<output for="noiseGain"></output>%
-									<i class="mdi mdi-volume-off muted"></i>
-								</label>
-							</div>
-							<div class="field-body">
-								<div class="field">
+									<label class="label is-small">
+										<span data-i18n="label.gain">Noise</span>:
+										<output for="noiseGain"></output>%
+										<i class="mdi mdi-volume-off muted"></i>
+									</label>
 									<div class="control">
 										<input
 											id="noiseGain"
@@ -389,7 +157,565 @@
 								</div>
 							</div>
 						</div>
+					</div>
+					<a class="navbar-item" href="https://discord.gg/ERceAGnCr7" target="_blank" title="Text/voice chat on Discord"><i class="mdi mdi-discord"></i></a>
+				</div>
+				<div class="navbar-end"></div>
+			</div>
+		</nav>
 
+		<div class="modal is-active init">
+			<div class="modal-content">
+				<div class="notification is-info">
+						<h1 class="title has-text-centered">
+							Loading...
+						</h1>
+						<p>
+							If you can read this,
+							it could mean
+							your browser has disabled JavaScript,
+							a browser extension is interfering with JavaScript,
+							or your browser is too old to run Vail.
+						</p>
+						<p>
+							Please post a screen shot in a new
+							<a href="https://github.com/Vail-CW/vail_web_repeater/issues">GitHub Issue</a>,
+							or in our
+							<a href="https://discord.gg/ERceAGnCr7">Discord instance</a>,
+							so we can help you out!
+						</p>
+						<ul>
+							<li>Starting JavaScript application...</li>
+						</ul>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<section class="section">
+			<div class="container is-max-widescreen">
+				<!-- Welcome Disclaimer -->
+			<div class="notification mb-4" style="background-color: rgba(0, 134, 102, 0.12); border-left: 4px solid #086; padding: 0.75rem 1rem; color: #e8e8e8;">
+				<p class="is-size-7 mb-0">
+					<strong>Welcome to the Official Vail Repeater!</strong> If you experience any issues or have any feedback or feature requests, please reach out in our <a href="https://discord.gg/ERceAGnCr7" style="color: #0af; text-decoration: underline;">Discord</a> linked on the top right, or open an issue on <a href="https://github.com/Vail-CW/vail_web_repeater/issues" style="color: #0af; text-decoration: underline;">GitHub</a>.
+				</p>
+			</div>
+
+			<!-- Active Public Rooms Section -->
+			<div class="box rooms-box mb-5">
+					<h2 class="title is-5 mb-3">
+						<span class="icon-text">
+							<span class="icon"><i class="mdi mdi-door-open"></i></span>
+							<span>Active Public Rooms</span>
+						</span>
+					</h2>
+					<div id="rooms-list" class="rooms-grid">
+						<p class="has-text-grey-light is-size-7">No active public rooms</p>
+					</div>
+				</div>
+
+				<!-- Main Content Split: Left content + Right user list -->
+				<div class="columns is-variable is-6">
+					<!-- Left side: All main content -->
+					<div class="column is-8">
+						<!-- Main Transceiver Section -->
+						<div class="box transceiver-box mb-5">
+							<div class="level">
+								<div class="level-left">
+									<div class="level-item">
+										<h1 class="title is-4" data-i18n="heading.repeater">Repeater</h1>
+									</div>
+								</div>
+								<div class="level-right">
+									<div class="level-item">
+										<!-- Break In Toggle -->
+										<div class="field" id="break-in-field" style="margin-bottom: 0; margin-right: 1rem;">
+											<div style="display: flex; align-items: center; gap: 0.5rem;">
+												<label class="label is-small" style="margin-bottom: 0; font-size: 0.875rem;">Break In</label>
+												<span class="icon is-small" data-tooltip="When enabled, you are broadcasting to others in the room" style="cursor: help; color: #7a7a7a;">
+													<i class="mdi mdi-information-outline"></i>
+												</span>
+												<div class="toggle-switch toggle-switch-small">
+													<input type="checkbox" id="break-in-toggle" class="toggle-input">
+													<label for="break-in-toggle" class="toggle-label"></label>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div class="level-item">
+										<!-- This appears as a little light that turns on when someone's sending -->
+										<span class="tag recv-lamp is-medium">
+											<i class="mdi mdi-radio-tower"></i>
+											<i class="mdi mdi-volume-off muted"></i>
+										</span>
+									</div>
+								</div>
+							</div>
+
+							<div class="block">
+								<div class="columns is-variable is-3">
+									<!-- Left side: Custom room buttons stacked -->
+									<div class="column is-narrow">
+										<div class="buttons-stacked">
+											<button class="button is-info is-fullwidth mb-2" id="join-custom-room-btn">
+												<span class="icon">
+													<i class="mdi mdi-login"></i>
+												</span>
+												<span>Join Custom</span>
+											</button>
+											<button class="button is-success is-fullwidth" id="create-custom-room-btn">
+												<span class="icon">
+													<i class="mdi mdi-plus-circle"></i>
+												</span>
+												<span>Create Custom</span>
+											</button>
+										</div>
+									</div>
+									<!-- Right side: Room selector -->
+									<div class="column">
+										<div class="select is-medium is-fullwidth">
+											<select id="repeater">
+												<option value="">General</option>
+												<option value="1">Channel 1</option>
+												<option value="2">Channel 2</option>
+												<option value="3">Channel 3</option>
+												<option value="Null">Null (no transmit)</option>
+												<option value="Echo">Echo</option>
+												<option value="Decoder">Decoder</option>
+												<option value="Weekly Enigma">Weekly Enigma</option>
+												<option value="Fortunes">Fortunes</option>
+												<option value="Fortunes: Pauses ×2">Fortunes: Pauses ×2</option>
+												<option value="Fortunes: Pauses ×4">Fortunes: Pauses ×4</option>
+												<option value="Fortunes: Pauses ×8">Fortunes: Pauses ×8</option>
+											</select>
+										</div>
+									</div>
+								</div>
+							</div>
+
+							<div class="block">
+								<div style="display: flex; justify-content: flex-end; margin-bottom: 0.5rem;">
+									<button class="button is-small is-ghost" id="toggle-charts" data-tooltip="Toggle visualization" style="padding: 0.25rem 0.5rem;">
+										<span class="icon is-small">
+											<i class="mdi mdi-eye"></i>
+										</span>
+									</button>
+								</div>
+								<div class="charts-container" id="charts">
+									<canvas class="chart" id="rxChart" data-color="orange"></canvas>
+									<canvas class="chart" id="txChart" data-color="teal"></canvas>
+									<canvas class="chart" id="key0Chart" data-color="olive"></canvas>
+									<canvas class="chart" id="key1Chart" data-color="purple"></canvas>
+								</div>
+							</div>
+
+							<div class="block">
+								<!-- Tabbed interface for Morse/Text Chat -->
+								<div class="tabs is-boxed is-small">
+									<ul>
+										<li class="is-active" data-tab="morse-tab">
+											<a>
+												<span class="icon is-small"><i class="mdi mdi-sine-wave"></i></span>
+												<span>Morse Chat</span>
+											</a>
+										</li>
+										<li data-tab="text-tab">
+											<a>
+												<span class="icon is-small"><i class="mdi mdi-message-text"></i></span>
+												<span>Text Chat</span>
+											</a>
+										</li>
+										<li id="decoder-tab-button" data-tab="decoder-tab">
+											<a>
+												<span class="icon is-small"><i class="mdi mdi-code-braces"></i></span>
+												<span>Decode</span>
+											</a>
+										</li>
+										<li id="enigma-tab-button" data-tab="enigma-tab" style="display: none;">
+											<a>
+												<span class="icon is-small"><i class="mdi mdi-cog-box"></i></span>
+												<span>Enigma</span>
+											</a>
+										</li>
+									</ul>
+								</div>
+
+								<!-- Morse Chat Tab Content -->
+								<div id="morse-tab" class="tab-content">
+									<div class="columns is-variable is-6">
+										<!-- Left: Key buttons -->
+										<div class="column is-half">
+											<div class="columns is-mobile is-gapless key-buttons">
+												<div class="column">
+													<button class="button key is-primary is-large is-fullwidth" data-key="0" title="right click for Key">
+														Key
+													</button>
+													<div class="shortcuts has-text-centered mt-2">
+														<kbd title="keyboard button">.</kbd>
+														<kbd title="keyboard button">x</kbd>
+														<i class="mdi mdi-gamepad-circle-left" title="Gamepad Left Button"></i>
+													</div>
+												</div>
+												<div class="column">
+													<button class="button key is-primary is-large is-fullwidth" data-key="1" title="right click for Key">
+														Key
+													</button>
+													<div class="shortcuts has-text-centered mt-2">
+														<kbd title="keyboard button">/</kbd>
+														<kbd title="keyboard button">z</kbd>
+														<i class="mdi mdi-gamepad-circle-up" title="Gamepad Top Button"></i>
+													</div>
+												</div>
+											</div>
+										</div>
+										<!-- Right: Mode and WPM -->
+										<div class="column is-half">
+											<!-- Mode -->
+											<div class="field">
+												<label class="label is-small" data-i18n="heading.mode">Mode</label>
+												<div class="control">
+													<div class="select is-fullwidth">
+														<select id="keyer-mode">
+															<option value="cootie" data-i18n="keyer.cootie">Straight Key / Cootie</option>
+															<option value="bug" data-i18n="keyer.bug">Bug</option>
+															<option value="elbug" data-i18n="keyer.elbug">ElBug</option>
+															<option value="singledot" data-i18n="keyer.singledot">Single Dot</option>
+															<option value="ultimatic" data-i18n="keyer.ultimatic">Ultimatic</option>
+															<option value="iambic" data-i18n="keyer.iambic">Iambic (Plain)</option>
+															<option value="iambica" data-i18n="keyer.iambica">Iambic A</option>
+															<option value="iambicb" data-i18n="keyer.iambicb">Iambic B</option>
+															<option value="keyahead" data-i18n="keyer.keyahead">Keyahead</option>
+														</select>
+													</div>
+												</div>
+											</div>
+											<!-- WPM slider full width below -->
+											<div class="field">
+												<label class="label is-small">
+													<output for="keyer-rate"></output>&nbsp;<span data-i18n="label.wpm">WPM</span>
+													/
+													<span data-fill="keyer-ms"></span><span data-i18n="label:ms">ms</span>
+												</label>
+												<div class="control">
+													<input
+														id="keyer-rate"
+														type="range"
+														min="5"
+														max="50"
+														step="1"
+														value="12">
+												</div>
+											</div>
+											<!-- TX Tone slider full width below -->
+											<div class="field">
+												<label class="label is-small">
+													<span data-i18n="label.tx-tone">TX Tone</span>:
+													<output for="tx-tone" data-transform="note"></output>
+													<output for="tx-tone" data-transform="freq"></output>Hz
+												</label>
+												<div class="control">
+													<input
+														id="tx-tone"
+														type="range"
+														min="0"
+														max="127"
+														value="72"
+														step="1"
+														list="tones">
+												</div>
+												<p class="help" style="margin-top: 0.25rem;">This is the tone of both your sidetone as well as the tone others will hear from you</p>
+											</div>
+										</div>
+									</div>
+								</div>
+
+								<!-- Text Chat Tab Content -->
+								<div id="text-tab" class="tab-content" style="display: none;">
+									<div id="chat-messages-inline" class="chat-messages-inline"></div>
+									<div class="field has-addons mt-3">
+										<div class="control is-expanded">
+											<input class="input is-small" type="text" id="chat-input-inline" placeholder="Type a message..." maxlength="200">
+										</div>
+										<div class="control">
+											<button class="button is-primary is-small" id="chat-send-btn-inline">
+												<span class="icon">
+													<i class="mdi mdi-send"></i>
+												</span>
+											</button>
+										</div>
+									</div>
+								</div>
+
+								<!-- Decoded Text Tab Content -->
+								<div id="decoder-tab" class="tab-content" style="display: none;">
+									<!-- Message when decoder is not enabled -->
+									<div id="decoder-disabled-message" class="box" style="background-color: #1a1a1a; border: 1px solid #363636; display: none;">
+										<div class="content has-text-centered" style="padding: 2rem;">
+											<span class="icon is-large has-text-info" style="font-size: 3rem;">
+												<i class="mdi mdi-information-outline"></i>
+											</span>
+											<h3 class="title is-5 mt-4" style="color: #f5f5f5;">Decoder Not Enabled</h3>
+											<p style="color: #b5b5b5; margin-bottom: 1.5rem;">
+												Live morse code decoding is not enabled for this room.
+											</p>
+											<div class="notification is-info is-light" style="text-align: left;">
+												<p class="mb-2"><strong>To use the decoder:</strong></p>
+												<ul style="margin-left: 1.5rem;">
+													<li>Select the <strong>"Decoder"</strong> room from the dropdown menu</li>
+													<li>Or create a custom room and check <strong>"Enable Decoder"</strong></li>
+												</ul>
+											</div>
+										</div>
+									</div>
+
+									<!-- Active decoder display -->
+									<div id="decoder-active-display" style="display: none;">
+										<div class="box" style="background-color: #1a1a1a; border: 1px solid #363636; min-height: 200px; max-height: 400px; overflow-y: auto;">
+											<div class="content">
+												<div id="decoded-text-display" style="font-family: monospace; font-size: 1.1em; line-height: 1.6; color: #f5f5f5;">
+													<p class="has-text-grey-light">Decoded morse code will appear here...</p>
+												</div>
+											</div>
+										</div>
+										<div class="field is-grouped is-grouped-right mt-3">
+											<div class="control">
+												<button class="button is-small is-dark" id="decoder-clear-btn">
+													<span class="icon">
+														<i class="mdi mdi-delete-outline"></i>
+													</span>
+													<span>Clear</span>
+												</button>
+											</div>
+											<div class="control">
+												<div id="decoder-speed-display" class="tag is-info">
+													Speed: -- WPM
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+
+								<!-- Enigma Tab Content -->
+								<div id="enigma-tab" class="tab-content" style="display: none;">
+									<!-- How It Works Explainer -->
+									<div class="box mb-4" style="background-color: #1a1a1a; border: 1px solid #363636;">
+										<h4 class="title is-6 has-text-light mb-3">
+											<span class="icon"><i class="mdi mdi-help-circle"></i></span>
+											<span>How It Works</span>
+										</h4>
+										<div class="content has-text-grey-light is-size-7">
+											<p>
+												Welcome to the <strong style="color: #c9f;">Weekly Enigma Challenge</strong>! A new encrypted message starts each Sunday morning
+												using World War II-era Enigma machine settings - tune in anytime during the week to decode it!
+											</p>
+											<ol style="margin-left: 1.5rem;">
+												<li>Listen to the morse code message being transmitted (it loops every few seconds)</li>
+												<li>Copy down the encoded letters you hear</li>
+												<li>Use an Enigma simulator (like <a href="https://cryptii.com/pipes/enigma-machine" target="_blank" style="color: #c9f;">cryptii.com</a>) with the settings shown below</li>
+												<li>Enter your copied text into the simulator to decode it</li>
+												<li>Remove any spacing characters (like "X" between words) from the decoded message</li>
+												<li>Submit your answer below to get on the leaderboard!</li>
+											</ol>
+											<p class="mt-2" style="color: #f5a623;">
+												<span class="icon is-small"><i class="mdi mdi-lightbulb"></i></span>
+												<strong style="color: #f5a623;">Tip:</strong> The message may use "X" to separate words. Remove these before submitting your answer.
+											</p>
+										</div>
+									</div>
+
+									<!-- Enigma Settings Display -->
+									<div class="box" style="background-color: #1a1a1a; border: 1px solid #363636;">
+										<h4 class="title is-6 has-text-light mb-3">
+											<span class="icon"><i class="mdi mdi-cog"></i></span>
+											<span>Enigma M3 Machine Settings</span>
+										</h4>
+										<p class="has-text-grey-light is-size-7 mb-3">
+											This transmission uses the <strong style="color: #f5f5f5;">Enigma M3</strong> model. Use an Enigma simulator like
+											<a href="https://cryptii.com/pipes/enigma-machine" target="_blank" style="color: #0af;">cryptii.com</a>
+											to decode the message.
+										</p>
+
+										<div class="columns is-mobile is-multiline" id="enigma-settings">
+											<!-- Rotors -->
+											<div class="column is-half-mobile is-one-quarter-tablet">
+												<div class="has-text-grey-light is-size-7">Rotors (L-M-R)</div>
+												<div class="has-text-light is-size-6" id="enigma-rotors">--</div>
+											</div>
+											<!-- Positions -->
+											<div class="column is-half-mobile is-one-quarter-tablet">
+												<div class="has-text-grey-light is-size-7">Start Positions</div>
+												<div class="has-text-light is-size-6" id="enigma-positions">--</div>
+											</div>
+											<!-- Ring Settings -->
+											<div class="column is-half-mobile is-one-quarter-tablet">
+												<div class="has-text-grey-light is-size-7">Ring Settings</div>
+												<div class="has-text-light is-size-6" id="enigma-rings">--</div>
+											</div>
+											<!-- Reflector -->
+											<div class="column is-half-mobile is-one-quarter-tablet">
+												<div class="has-text-grey-light is-size-7">Reflector</div>
+												<div class="has-text-light is-size-6" id="enigma-reflector">--</div>
+											</div>
+										</div>
+
+										<!-- Plugboard -->
+										<div class="mt-3">
+											<div class="has-text-grey-light is-size-7">Plugboard Connections</div>
+											<div class="has-text-light is-size-6" id="enigma-plugboard" style="font-family: monospace;">--</div>
+										</div>
+									</div>
+
+									<!-- Answer Input -->
+									<div class="box mt-4" style="background-color: #1a1a1a; border: 1px solid #363636;">
+										<h4 class="title is-6 has-text-light mb-3">
+											<span class="icon"><i class="mdi mdi-key"></i></span>
+											<span>Submit Your Decode</span>
+										</h4>
+										<div class="field has-addons">
+											<div class="control is-expanded">
+												<input class="input" type="text" id="enigma-answer-input"
+													   placeholder="Enter decoded message..." autocomplete="off">
+											</div>
+											<div class="control">
+												<button class="button is-success" id="enigma-submit-btn">
+													<span class="icon"><i class="mdi mdi-check"></i></span>
+													<span>Check</span>
+												</button>
+											</div>
+										</div>
+										<div id="enigma-result" class="mt-3" style="display: none;"></div>
+									</div>
+
+									<!-- No Puzzle Message -->
+									<div id="enigma-no-puzzle" class="box mt-4" style="background-color: #1a1a1a; border: 1px solid #363636; display: none;">
+										<div class="content has-text-centered" style="padding: 2rem;">
+											<span class="icon is-large has-text-warning" style="font-size: 3rem;">
+												<i class="mdi mdi-alert-circle-outline"></i>
+											</span>
+											<h3 class="title is-5 mt-4" style="color: #f5f5f5;">No Puzzle Available</h3>
+											<p style="color: #b5b5b5;">
+												There is no Weekly Enigma puzzle available at this time. Check back later!
+											</p>
+										</div>
+									</div>
+
+									<!-- Leaderboard Section (Collapsible) -->
+									<div class="box mt-4" id="enigma-leaderboard-box" style="background-color: #1a1a1a; border: 1px solid #363636;">
+										<div style="cursor: pointer;" id="enigma-leaderboard-header">
+											<h4 class="title is-6 has-text-light mb-0" style="display: flex; align-items: center; justify-content: space-between;">
+												<span>
+													<span class="icon"><i class="mdi mdi-trophy"></i></span>
+													<span>Leaderboard</span>
+												</span>
+												<span class="icon" id="enigma-leaderboard-toggle">
+													<i class="mdi mdi-chevron-up"></i>
+												</span>
+											</h4>
+										</div>
+										<div id="enigma-leaderboard-content" style="margin-top: 1rem;">
+											<p class="has-text-grey-light is-size-7">Loading leaderboard...</p>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<!-- Notes -->
+						<div class="box notes-box">
+							<h2 class="title is-6 has-text-weight-semibold mb-3" data-i18n="heading.notes">Notes</h2>
+							<textarea class="textarea is-small" data-i18n-placeholder="description.notes" id="notes" rows="6"></textarea>
+						</div>
+					</div>
+
+					<!-- Right side: User list spanning full height -->
+					<div class="column is-4">
+						<div class="box user-list-box mb-5">
+							<div class="level mb-3">
+								<div class="level-left">
+									<div class="level-item">
+										<h2 class="title is-6 has-text-weight-semibold mb-0">
+											<span class="icon-text">
+												<span class="icon"><i class="mdi mdi-account-multiple"></i></span>
+												<span data-i18n="heading.users">Connected Users</span>
+											</span>
+										</h2>
+									</div>
+								</div>
+								<div class="level-right">
+									<div class="level-item">
+										<button class="button is-small is-ghost" id="toggle-user-list" data-tooltip="Toggle user list" style="padding: 0.25rem 0.5rem; margin-right: 0.5rem;">
+											<span class="icon is-small">
+												<i class="mdi mdi-eye"></i>
+											</span>
+										</button>
+									</div>
+									<div class="level-item">
+										<span class="tag is-success is-medium user-count-badge">
+											<output id="note">0</output>
+										</span>
+									</div>
+								</div>
+							</div>
+							<div id="user-list" class="content">
+								<p class="has-text-grey-light is-size-7">No users connected</p>
+							</div>
+						</div>
+
+					<!-- CW Key Adapter Promo -->
+					<div class="box mb-5" style="padding: 1.25rem; background-color: rgba(0, 134, 102, 0.2); border: 2px solid #086;">
+						<div style="text-align: center; margin-bottom: 0.5rem;">
+							<span class="icon" style="font-size: 2rem; color: #0af;">
+								<i class="mdi mdi-usb"></i>
+							</span>
+						</div>
+						<p class="is-size-7" style="line-height: 1.5; color: #e8e8e8; text-align: center;">
+							<strong style="color: #fff; font-size: 0.9rem;">Interested in using a real CW Key with your computer?</strong>
+							<br><br>
+							Check out how to build your own adapter or purchase one at
+							<br>
+							<a href="https://www.vailadapter.com" target="_blank" style="color: #0af; text-decoration: underline; font-weight: 600;">www.vailadapter.com</a>
+						</p>
+					</div>
+
+					<!-- Weekly Enigma Challenge Promo -->
+					<div class="box mb-5" id="enigma-promo-box" style="padding: 1.25rem; background-color: rgba(102, 51, 153, 0.2); border: 2px solid #639;">
+						<div style="text-align: center; margin-bottom: 0.5rem;">
+							<span class="icon" style="font-size: 2rem; color: #c9f;">
+								<i class="mdi mdi-cog-box"></i>
+							</span>
+						</div>
+						<p class="is-size-7" style="line-height: 1.5; color: #e8e8e8; text-align: center;">
+							<strong style="color: #fff; font-size: 0.9rem;">Weekly Enigma Challenge</strong>
+							<br><br>
+							Test your CW decoding skills! A new Enigma-encrypted message each Sunday morning - decode it anytime during the week and climb the leaderboard!
+							<br><br>
+							<a href="#" id="enigma-promo-link" style="color: #c9f; text-decoration: underline; font-weight: 600;">Try the Weekly Enigma</a>
+						</p>
+						<div id="enigma-latest-solve" style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(102, 51, 153, 0.3); display: none;">
+							<p class="is-size-7" style="color: #b8b8b8; text-align: center;">
+								<span class="icon is-small" style="color: #c9f;"><i class="mdi mdi-trophy"></i></span>
+								<span id="enigma-latest-solve-text">Last decoded by: ...</span>
+							</p>
+						</div>
+					</div>
+
+					<!-- Upcoming Events Widget -->
+					<div class="box" style="background-color: rgba(0, 134, 102, 0.08);">
+						<h2 class="title is-6 has-text-weight-semibold mb-3">
+							<span class="icon-text">
+								<span class="icon"><i class="mdi mdi-calendar-clock"></i></span>
+								<span>Upcoming Events</span>
+							</span>
+						</h2>
+						<div id="upcoming-events-list">
+							<p class="has-text-grey-light is-size-7">Loading events...</p>
+						</div>
+						<div class="has-text-centered mt-3">
+							<a href="events.html" class="is-size-7" style="color: #0af;">
+								Click here to see more events or to create your own
+							</a>
+						</div>
+					</div>
 					</div>
 				</div>
 			</div>
@@ -398,6 +724,186 @@
 		<div class="columns is-centered bottom">
 			<div class="column is-half" id="errors"></div>
 		</div>
+
+		<!-- Join Custom Room Modal -->
+		<div class="modal" id="join-room-modal">
+			<div class="modal-background"></div>
+			<div class="modal-card">
+				<header class="modal-card-head">
+					<p class="modal-card-title">Join Custom Room</p>
+					<button class="delete" aria-label="close" id="close-join-modal-btn"></button>
+				</header>
+				<section class="modal-card-body">
+					<div class="field">
+						<label class="label">Room Name</label>
+						<div class="control">
+							<input class="input" type="text" id="join-room-name" placeholder="Enter room name" maxlength="50">
+						</div>
+						<p class="help">Enter the name of the room you want to join</p>
+					</div>
+				</section>
+				<footer class="modal-card-foot">
+					<button class="button is-info" id="join-room-btn">Join Room</button>
+					<button class="button" id="cancel-join-modal-btn">Cancel</button>
+				</footer>
+			</div>
+		</div>
+
+		<!-- Create Custom Room Modal -->
+		<div class="modal" id="custom-room-modal">
+			<div class="modal-background"></div>
+			<div class="modal-card">
+				<header class="modal-card-head">
+					<p class="modal-card-title">Create Custom Room</p>
+					<button class="delete" aria-label="close" id="close-modal-btn"></button>
+				</header>
+				<section class="modal-card-body">
+					<div class="field">
+						<label class="label">Room Name</label>
+						<div class="control">
+							<input class="input" type="text" id="custom-room-name" placeholder="Enter room name" maxlength="50">
+						</div>
+						<p class="help">Choose a unique name for your room</p>
+					</div>
+					<div class="field">
+						<label class="checkbox">
+							<input type="checkbox" id="custom-room-private">
+							<span>Private Room</span>
+						</label>
+						<p class="help">Private rooms don't appear in the Active Public Rooms list</p>
+					</div>
+					<div class="field">
+						<label class="checkbox">
+							<input type="checkbox" id="custom-room-decoder">
+							<span>Enable Decoder</span>
+						</label>
+						<p class="help">Enable live morse code decoding in this room</p>
+					</div>
+				</section>
+				<footer class="modal-card-foot">
+					<button class="button is-success" id="create-room-btn">Create Room</button>
+					<button class="button" id="cancel-modal-btn">Cancel</button>
+				</footer>
+			</div>
+		</div>
+
+		<!-- Change Callsign Modal -->
+		<div class="modal" id="change-callsign-modal">
+			<div class="modal-background"></div>
+			<div class="modal-card">
+				<header class="modal-card-head">
+					<p class="modal-card-title">Change Your Callsign</p>
+					<button class="delete" aria-label="close" id="close-callsign-modal-btn"></button>
+				</header>
+				<section class="modal-card-body">
+					<div class="field">
+						<label class="label">New Callsign</label>
+						<div class="control has-icons-left">
+							<input class="input" type="text" id="new-callsign-input" placeholder="Enter your callsign" maxlength="20">
+							<span class="icon is-small is-left">
+								<i class="mdi mdi-account"></i>
+							</span>
+						</div>
+						<p class="help">This will be visible to others on the repeater</p>
+					</div>
+				</section>
+				<footer class="modal-card-foot">
+					<button class="button is-primary" id="save-callsign-btn">Save</button>
+					<button class="button" id="cancel-callsign-modal-btn">Cancel</button>
+				</footer>
+			</div>
+		</div>
+
+		<!-- Enigma Callsign Prompt Modal -->
+		<div class="modal" id="enigma-callsign-modal">
+			<div class="modal-background"></div>
+			<div class="modal-card">
+				<header class="modal-card-head" style="background-color: #1a1a2e;">
+					<p class="modal-card-title" style="color: #fff;">
+						<span class="icon"><i class="mdi mdi-trophy"></i></span>
+						<span>Congratulations!</span>
+					</p>
+					<button class="delete" aria-label="close" id="close-enigma-callsign-modal-btn"></button>
+				</header>
+				<section class="modal-card-body">
+					<div class="notification is-success is-light mb-4">
+						<p><strong>You decoded the message correctly!</strong></p>
+					</div>
+					<p class="mb-4">
+						To record your achievement on the leaderboard, please enter a callsign.
+						Anonymous callsigns (anon####) are not eligible for the leaderboard.
+					</p>
+					<div class="field">
+						<label class="label">Your Callsign</label>
+						<div class="control has-icons-left">
+							<input class="input" type="text" id="enigma-callsign-input" placeholder="Enter your callsign" maxlength="20">
+							<span class="icon is-small is-left">
+								<i class="mdi mdi-account"></i>
+							</span>
+						</div>
+						<p class="help">This will be visible on the leaderboard</p>
+					</div>
+				</section>
+				<footer class="modal-card-foot">
+					<button class="button is-success" id="save-enigma-callsign-btn">
+						<span class="icon"><i class="mdi mdi-check"></i></span>
+						<span>Save & Record Score</span>
+					</button>
+					<button class="button" id="skip-enigma-callsign-btn">Skip (No Leaderboard)</button>
+				</footer>
+			</div>
+		</div>
+
+		<!-- Admin Password Modal -->
+		<div class="modal" id="admin-password-modal-main">
+			<div class="modal-background"></div>
+			<div class="modal-card">
+				<header class="modal-card-head">
+					<p class="modal-card-title">Admin Authentication Required</p>
+					<button class="delete" aria-label="close" id="close-admin-password-modal-btn"></button>
+				</header>
+				<section class="modal-card-body">
+					<form id="admin-password-form-main">
+						<p class="mb-4">You've entered an admin callsign. Please enter your admin password to authenticate.</p>
+						<div class="field">
+							<label class="label">Admin Password</label>
+							<div class="control has-icons-left">
+								<input class="input" type="password" id="admin-password-input-main" placeholder="Enter admin password" autocomplete="current-password">
+								<span class="icon is-small is-left">
+									<i class="mdi mdi-lock"></i>
+								</span>
+							</div>
+							<p class="help">Your password will be stored for this browser session</p>
+						</div>
+						<div id="admin-password-error-main" class="notification is-danger is-light" style="display: none;">
+							<p>Incorrect password. Please try again.</p>
+						</div>
+					</form>
+				</section>
+				<footer class="modal-card-foot">
+					<button type="submit" form="admin-password-form-main" class="button is-primary" id="confirm-admin-password-main-btn">Authenticate</button>
+					<button class="button" id="cancel-admin-password-modal-btn">Cancel</button>
+				</footer>
+			</div>
+		</div>
+
+		<!-- Event Details Modal -->
+		<div class="modal" id="event-details-modal-main">
+			<div class="modal-background"></div>
+			<div class="modal-card">
+				<header class="modal-card-head">
+					<p class="modal-card-title">Event Details</p>
+					<button class="delete" aria-label="close" id="close-event-details-modal-btn"></button>
+				</header>
+				<section class="modal-card-body">
+					<div id="event-details-content-main">
+						<!-- Event details will be inserted here -->
+					</div>
+				</section>
+			</div>
+		</div>
+
+		<script type="module" src="scripts/upcoming-events.mjs?v=1.3.0"></script>
 	</body>
 </html>
 <!-- vim: set noet ts=2 sw=2 : -->

@@ -34,6 +34,43 @@ type Message struct {
 	// Timings alternate between tone and silence.
 	// For example, `A` could be sent as [80, 80, 240]
 	Duration []uint16
+
+	// Sender's callsign (optional)
+	Callsign string `json:",omitempty"`
+
+	// Sender's TX tone as MIDI note number (0-127, 0 means not specified)
+	TxTone uint8 `json:",omitempty"`
+
+	// List of connected users with callsigns in current repeater (sent on join/part/status updates)
+	Users []string `json:",omitempty"`
+
+	// List of connected users with detailed info (callsign + TX tone)
+	UsersInfo []UserInfo `json:",omitempty"`
+
+	// List of all active rooms with user counts (sent periodically)
+	Rooms []RoomInfo `json:",omitempty"`
+
+	// Whether this room is private (won't appear in room lists)
+	Private bool `json:",omitempty"`
+
+	// Whether this room has the decoder enabled
+	Decoder bool `json:",omitempty"`
+
+	// Text chat message (optional, for chat messages)
+	Text string `json:",omitempty"`
+}
+
+// RoomInfo contains information about a repeater room
+type RoomInfo struct {
+	Name    string `json:"name"`
+	Users   int    `json:"users"`
+	Private bool   `json:"private"`
+}
+
+// UserInfo contains information about a connected user
+type UserInfo struct {
+	Callsign string `json:"callsign"`
+	TxTone   uint8  `json:"txTone"` // MIDI note number
 }
 
 func NewMessage(ts time.Time, durations ...time.Duration) Message {

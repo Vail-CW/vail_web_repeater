@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Vail - Events</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+
+		<!-- Bulma CSS -->
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@6.5.95/css/materialdesignicons.min.css">
+
+		<!-- Vail stuff -->
+		<link rel="manifest" href="manifest.json">
+		<link rel="icon" href="assets/vail.png" sizes="256x256" type="image/png">
+		<link rel="icon" href="assets/vail.svg" sizes="any" type="image/svg+xml">
+		<script type="module" src="scripts/events.mjs?v=1.2.0"></script>
+		<link rel="stylesheet" href="vail.css?v=1.2.0">
+		<link rel="stylesheet" href="dark.css?v=1.2.0">
+		<style>
+			/* Calendar Styles */
+			.calendar-container {
+				background: rgba(0, 209, 178, 0.03);
+				border-radius: 12px;
+				padding: 1.5rem;
+			}
+
+			.calendar-header {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				margin-bottom: 2rem;
+			}
+
+			.calendar-month-year {
+				font-size: 1.75rem;
+				font-weight: 600;
+				color: #00d1b2;
+			}
+
+			.calendar-nav {
+				display: flex;
+				gap: 0.5rem;
+			}
+
+			.calendar-grid {
+				display: grid;
+				grid-template-columns: repeat(7, 1fr);
+				gap: 1px;
+				background: rgba(0, 209, 178, 0.1);
+				border-radius: 8px;
+				overflow: hidden;
+			}
+
+			.calendar-day-header {
+				background: rgba(0, 134, 102, 0.2);
+				padding: 0.75rem;
+				text-align: center;
+				font-weight: 600;
+				font-size: 0.85rem;
+				color: #0af;
+			}
+
+			.calendar-day {
+				background: rgba(0, 0, 0, 0.2);
+				min-height: 120px;
+				min-width: 0;
+				padding: 0.5rem;
+				position: relative;
+				cursor: pointer;
+				transition: all 0.2s ease;
+				display: flex;
+				flex-direction: column;
+			}
+
+			.calendar-day:hover {
+				background: rgba(0, 209, 178, 0.05);
+			}
+
+			.calendar-day.other-month {
+				opacity: 0.3;
+			}
+
+			.calendar-day.today {
+				background: rgba(0, 209, 178, 0.15);
+				border: 2px solid #00d1b2;
+			}
+
+			.calendar-day-number {
+				font-weight: 600;
+				color: #e8e8e8;
+				margin-bottom: 0.25rem;
+				font-size: 0.9rem;
+			}
+
+			.calendar-event {
+				background: rgba(0, 209, 178, 0.15);
+				border-left: 3px solid #00d1b2;
+				padding: 0.25rem 0.5rem;
+				margin-bottom: 0.25rem;
+				border-radius: 4px;
+				font-size: 0.75rem;
+				cursor: pointer;
+				transition: all 0.2s ease;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+				min-width: 0;
+				width: 100%;
+			}
+
+			.calendar-event:hover {
+				background: rgba(0, 209, 178, 0.25);
+				transform: translateX(2px);
+			}
+
+			.calendar-event.recurring {
+				border-left-color: #086;
+				background: rgba(0, 134, 102, 0.15);
+			}
+
+			.calendar-event-time {
+				font-weight: 600;
+				color: #0af;
+			}
+
+			.calendar-event-name {
+				color: #e8e8e8;
+			}
+
+			.empty-state {
+				text-align: center;
+				padding: 4rem 2rem;
+			}
+
+			.empty-state-icon {
+				font-size: 4rem;
+				color: #7a7a7a;
+				margin-bottom: 1rem;
+			}
+
+			/* Event Details Modal Styles */
+			.event-details-modal .event-name {
+				font-size: 1.5rem;
+				font-weight: 600;
+				color: #00d1b2;
+				margin-bottom: 1rem;
+			}
+
+			.event-details-modal .event-meta {
+				display: flex;
+				flex-direction: column;
+				gap: 0.75rem;
+				margin-bottom: 1rem;
+			}
+
+			.event-details-modal .event-meta-item {
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+				font-size: 0.95rem;
+				color: #e8e8e8;
+			}
+
+			.event-details-modal .event-description {
+				color: #e8e8e8;
+				margin-bottom: 1rem;
+				line-height: 1.6;
+			}
+
+			.event-details-modal .event-actions {
+				display: flex;
+				gap: 0.5rem;
+				flex-wrap: wrap;
+			}
+
+			.recurring-badge {
+				display: inline-flex;
+				align-items: center;
+				gap: 0.25rem;
+				padding: 0.25rem 0.75rem;
+				background: rgba(0, 134, 102, 0.2);
+				border-radius: 12px;
+				font-size: 0.8rem;
+				color: #0af;
+				font-weight: 600;
+			}
+
+			/* Mobile responsive */
+			@media screen and (max-width: 768px) {
+				.calendar-day {
+					min-height: 80px;
+					padding: 0.25rem;
+				}
+
+				.calendar-day-number {
+					font-size: 0.75rem;
+				}
+
+				.calendar-event {
+					font-size: 0.65rem;
+					padding: 0.15rem 0.3rem;
+				}
+
+				.calendar-month-year {
+					font-size: 1.25rem;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<nav class="navbar is-dark">
+			<div class="navbar-brand">
+				<a class="navbar-item" href="index.html">
+					<img class="" src="assets/vail.svg" alt="">
+					<div class="block">Vail</div>
+				</a>
+			</div>
+			<div class="navbar-menu navbar-menu-centered" id="navbar-menu">
+				<div class="navbar-start"></div>
+				<div class="navbar-center">
+					<a class="navbar-item" href="index.html">
+						<span class="icon"><i class="mdi mdi-radio-tower"></i></span>
+						<span>Repeater</span>
+					</a>
+					<a class="navbar-item is-active" href="events.html">
+						<span class="icon"><i class="mdi mdi-calendar-clock"></i></span>
+						<span>Events</span>
+					</a>
+					<a class="navbar-item" href="https://discord.gg/ERceAGnCr7" target="_blank" title="Text/voice chat on Discord">
+						<i class="mdi mdi-discord"></i>
+					</a>
+				</div>
+				<div class="navbar-end"></div>
+			</div>
+		</nav>
+
+		<section class="section">
+			<div class="container is-max-widescreen">
+				<div class="level mb-5">
+					<div class="level-left">
+						<div class="level-item">
+							<div>
+								<h1 class="title is-3 mb-3">
+									<span class="icon-text">
+										<span class="icon"><i class="mdi mdi-calendar-clock"></i></span>
+										<span>Events Calendar</span>
+									</span>
+								</h1>
+								<p class="subtitle is-6 has-text-grey-light mt-2">Schedule and manage morse code practice sessions</p>
+							</div>
+						</div>
+					</div>
+					<div class="level-right">
+						<div class="level-item">
+							<div class="buttons">
+								<button class="button is-link is-medium" id="export-events-btn" style="display: none;">
+									<span class="icon">
+										<i class="mdi mdi-download"></i>
+									</span>
+									<span>Export</span>
+								</button>
+								<button class="button is-info is-medium" id="import-events-btn" style="display: none;">
+									<span class="icon">
+										<i class="mdi mdi-upload"></i>
+									</span>
+									<span>Import</span>
+								</button>
+								<button class="button is-primary is-medium" id="create-event-btn">
+									<span class="icon">
+										<i class="mdi mdi-plus-circle"></i>
+									</span>
+									<span>Create Event</span>
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Hidden file input for import -->
+				<input type="file" id="import-file-input" accept=".json" style="display: none;">
+
+				<!-- Calendar Container -->
+				<div class="calendar-container">
+					<div class="calendar-header">
+						<div class="calendar-month-year" id="calendar-month-year">
+							<!-- Month and Year will be inserted here -->
+						</div>
+						<div class="calendar-nav">
+							<button class="button is-info" id="prev-month-btn">
+								<span class="icon">
+									<i class="mdi mdi-chevron-left"></i>
+								</span>
+							</button>
+							<button class="button is-info" id="today-btn">
+								<span>Today</span>
+							</button>
+							<button class="button is-info" id="next-month-btn">
+								<span class="icon">
+									<i class="mdi mdi-chevron-right"></i>
+								</span>
+							</button>
+						</div>
+					</div>
+					<div class="calendar-grid" id="calendar-grid">
+						<!-- Calendar will be inserted here by JavaScript -->
+					</div>
+				</div>
+
+				<!-- Empty State -->
+				<div id="empty-state" class="empty-state" style="display: none;">
+					<div class="empty-state-icon">
+						<i class="mdi mdi-calendar-blank"></i>
+					</div>
+					<h2 class="title is-4">No Events Scheduled</h2>
+					<p class="subtitle is-6 has-text-grey">Create your first event to get started!</p>
+					<button class="button is-primary" onclick="document.getElementById('create-event-btn').click()">
+						<span class="icon">
+							<i class="mdi mdi-plus-circle"></i>
+						</span>
+						<span>Create Your First Event</span>
+					</button>
+				</div>
+			</div>
+		</section>
+
+		<!-- Create/Edit Event Modal -->
+		<div class="modal" id="event-modal">
+			<div class="modal-background"></div>
+			<div class="modal-card">
+				<header class="modal-card-head">
+					<p class="modal-card-title" id="modal-title">Create Event</p>
+					<button class="delete" aria-label="close" id="close-modal-btn"></button>
+				</header>
+				<section class="modal-card-body">
+					<input type="hidden" id="event-id">
+
+					<div class="field">
+						<label class="label">Event Name</label>
+						<div class="control has-icons-left">
+							<input class="input" type="text" id="event-name" placeholder="e.g., Friday Night Practice Jam" maxlength="100">
+							<span class="icon is-small is-left">
+								<i class="mdi mdi-text"></i>
+							</span>
+						</div>
+					</div>
+
+					<div class="field">
+						<label class="label">Room Name</label>
+						<div class="control has-icons-left">
+							<input class="input" type="text" id="event-room" placeholder="e.g., beginners practice" maxlength="50">
+							<span class="icon is-small is-left">
+								<i class="mdi mdi-door-open"></i>
+							</span>
+						</div>
+						<p class="help">The Vail repeater room where this event will take place</p>
+					</div>
+
+					<div class="columns">
+						<div class="column">
+							<div class="field">
+								<label class="label">Date</label>
+								<div class="control has-icons-left">
+									<input class="input" type="date" id="event-date">
+									<span class="icon is-small is-left">
+										<i class="mdi mdi-calendar"></i>
+									</span>
+								</div>
+							</div>
+						</div>
+						<div class="column">
+							<div class="field">
+								<label class="label">Time</label>
+								<div class="control has-icons-left">
+									<input class="input" type="time" id="event-time">
+									<span class="icon is-small is-left">
+										<i class="mdi mdi-clock"></i>
+									</span>
+								</div>
+							</div>
+						</div>
+						<div class="column is-narrow">
+							<div class="field">
+								<label class="label">Timezone</label>
+								<div class="control">
+									<div class="select">
+										<select id="event-timezone">
+											<option value="ET">ET</option>
+											<option value="CT">CT</option>
+											<option value="MT">MT</option>
+											<option value="PT">PT</option>
+											<option value="UTC">UTC</option>
+										</select>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="field">
+						<label class="label">Description</label>
+						<div class="control">
+							<textarea class="textarea" id="event-description" placeholder="Brief description of the event" rows="3" maxlength="500"></textarea>
+						</div>
+					</div>
+
+					<div class="field">
+						<label class="label">Contact Email (Optional)</label>
+						<div class="control has-icons-left">
+							<input class="input" type="email" id="event-email" placeholder="your@email.com" maxlength="100">
+							<span class="icon is-small is-left">
+								<i class="mdi mdi-email"></i>
+							</span>
+						</div>
+						<p class="help">Optional email address for participants to contact you</p>
+					</div>
+
+					<div class="field">
+						<label class="label">Recurrence</label>
+						<div class="control">
+							<div class="select is-fullwidth">
+								<select id="event-recurrence">
+									<option value="once">One-time event</option>
+									<option value="daily">Daily</option>
+									<option value="weekly">Weekly</option>
+									<option value="monthly">Monthly</option>
+								</select>
+							</div>
+						</div>
+						<p class="help">Set if this event repeats on a regular schedule</p>
+					</div>
+
+					<div class="field" id="weekday-field" style="display: none;">
+						<label class="label">Day of Week</label>
+						<div class="control">
+							<div class="select is-fullwidth">
+								<select id="event-weekday">
+									<option value="0">Sunday</option>
+									<option value="1">Monday</option>
+									<option value="2">Tuesday</option>
+									<option value="3">Wednesday</option>
+									<option value="4">Thursday</option>
+									<option value="5">Friday</option>
+									<option value="6">Saturday</option>
+								</select>
+							</div>
+						</div>
+					</div>
+
+					<div class="field" id="end-date-field" style="display: none;">
+						<label class="checkbox">
+							<input type="checkbox" id="event-has-end-date">
+							Set an end date for recurring events
+						</label>
+					</div>
+
+					<div class="field" id="end-date-input-field" style="display: none;">
+						<label class="label">End Date</label>
+						<div class="control has-icons-left">
+							<input class="input" type="date" id="event-end-date">
+							<span class="icon is-small is-left">
+								<i class="mdi mdi-calendar-end"></i>
+							</span>
+						</div>
+					</div>
+				</section>
+				<footer class="modal-card-foot">
+					<button class="button is-primary" id="save-event-btn">Save Event</button>
+					<button class="button" id="cancel-modal-btn">Cancel</button>
+				</footer>
+			</div>
+		</div>
+
+		<!-- Delete Confirmation Modal -->
+		<div class="modal" id="delete-modal">
+			<div class="modal-background"></div>
+			<div class="modal-card">
+				<header class="modal-card-head has-background-danger">
+					<p class="modal-card-title has-text-white">Delete Event</p>
+					<button class="delete" aria-label="close" id="close-delete-modal-btn"></button>
+				</header>
+				<section class="modal-card-body">
+					<p>Are you sure you want to delete this event?</p>
+					<p class="has-text-weight-bold mt-3" id="delete-event-name"></p>
+					<p class="has-text-grey-light">This action cannot be undone.</p>
+				</section>
+				<footer class="modal-card-foot">
+					<button class="button is-danger" id="confirm-delete-btn">Delete Event</button>
+					<button class="button" id="cancel-delete-modal-btn">Cancel</button>
+				</footer>
+			</div>
+		</div>
+
+		<!-- Event Details Modal -->
+		<div class="modal" id="event-details-modal">
+			<div class="modal-background"></div>
+			<div class="modal-card event-details-modal">
+				<header class="modal-card-head">
+					<p class="modal-card-title">Event Details</p>
+					<button class="delete" aria-label="close" id="close-event-details-btn"></button>
+				</header>
+				<section class="modal-card-body">
+					<div id="event-details-content">
+						<!-- Event details will be inserted here -->
+					</div>
+				</section>
+			</div>
+		</div>
+
+		<!-- Admin Password Modal -->
+		<div class="modal" id="admin-password-modal">
+			<div class="modal-background"></div>
+			<div class="modal-card">
+				<header class="modal-card-head">
+					<p class="modal-card-title">Admin Authentication Required</p>
+					<button class="delete" aria-label="close" id="close-admin-modal-btn"></button>
+				</header>
+				<section class="modal-card-body">
+					<form id="admin-password-form">
+						<p class="mb-4">You are attempting to modify an event created by another user. Please enter your admin password to continue.</p>
+						<div class="field">
+							<label class="label">Admin Password</label>
+							<div class="control has-icons-left">
+								<input class="input" type="password" id="admin-password-input" placeholder="Enter admin password" autocomplete="current-password">
+								<span class="icon is-small is-left">
+									<i class="mdi mdi-lock"></i>
+								</span>
+							</div>
+							<p class="help">Your password will be stored for this session</p>
+						</div>
+						<div id="admin-password-error" class="notification is-danger is-light" style="display: none;">
+							<p>Incorrect password. Please try again.</p>
+						</div>
+					</form>
+				</section>
+				<footer class="modal-card-foot">
+					<button type="submit" form="admin-password-form" class="button is-primary" id="confirm-admin-password-btn">Authenticate</button>
+					<button class="button" id="cancel-admin-modal-btn">Cancel</button>
+				</footer>
+			</div>
+		</div>
+	</body>
+</html>

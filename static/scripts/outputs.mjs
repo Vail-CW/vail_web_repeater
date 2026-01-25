@@ -192,10 +192,11 @@ class Buzzer extends AudioSource {
 	  * @param {boolean} tx Transmit or receive tone
 	  * @param {number} when Time to begin, in ms (0=now)
 	  * @param {number} duration Duration of buzz (ms)
+	  * @param {number} rxTone MIDI note for RX (sender's TX tone)
 	  */
-	 BuzzDuration(tx, when, duration) {
-		this.Buzz(tx, when)
-		this.Silence(tx, when + duration)
+	 BuzzDuration(tx, when, duration, rxTone=69) {
+		this.Buzz(tx, when, rxTone)
+		this.Silence(tx, when + duration, rxTone)
 	}
 
 	/**
@@ -230,7 +231,7 @@ class AudioBuzzer extends Buzzer {
 }
 
 /**
- * Buzzers keep two oscillators: one high and one low.
+ * Buzzers keep oscillators for TX and multiple RX senders.
  * They generate a continuous waveform,
  * and we change the gain to turn the pitches off and on.
  *
@@ -242,11 +243,13 @@ class ToneBuzzer extends AudioBuzzer {
 	constructor(context, {txGain=0.5, highFreq=HIGH_FREQ, lowFreq=LOW_FREQ} = {}) {
 		super(context)
 
-		this.rxOsc = new Oscillator(this.context, lowFreq, txGain)
+		// TX oscillator remains the same
 		this.txOsc = new Oscillator(this.context, highFreq, txGain)
-
-		this.rxOsc.connect(this.masterGain)
 		this.txOsc.connect(this.masterGain)
+
+		// Map of sender tone → oscillator for multi-sender RX
+		this.rxOscillators = new Map()
+		this.txGain = txGain
 
 		// Keep the speaker going always. This keeps the browser from "swapping out" our audio context.
 		if (false) {
@@ -256,17 +259,32 @@ class ToneBuzzer extends AudioBuzzer {
 	}
 
 	/**
-	 * Set MIDI note for tx/rx tone
-	 * 
-	 * @param {Boolean} tx True to set transmit note
+	 * Get or create an RX oscillator for a given MIDI note
+	 *
+	 * @param {Number} note MIDI note number
+	 * @returns {Oscillator} The oscillator for this note
+	 */
+	getOrCreateRxOscillator(note) {
+		if (!this.rxOscillators.has(note)) {
+			let osc = new Oscillator(this.context, 440, this.txGain)
+			osc.setMIDINote(note)
+			osc.connect(this.masterGain)
+			this.rxOscillators.set(note, osc)
+		}
+		return this.rxOscillators.get(note)
+	}
+
+	/**
+	 * Set MIDI note for tx tone
+	 *
+	 * @param {Boolean} tx True to set transmit note (ignored if false)
 	 * @param {Number} note MIDI note to send
 	 */
 	 SetMIDINote(tx, note) {
 		if (tx) {
 			this.txOsc.setMIDINote(note)
-		} else {
-			this.rxOsc.setMIDINote(note)
 		}
+		// RX notes are now set dynamically per sender
 	}
 
 	/**
@@ -274,10 +292,16 @@ class ToneBuzzer extends AudioBuzzer {
 	  *
 	  * @param {boolean} tx Transmit or receive tone
 	  * @param {number} when Time to begin, in ms (0=now)
+	  * @param {number} rxTone MIDI note for RX (ignored if tx=true)
 	  */
-	async Buzz(tx, when = null) {
-        let osc = tx?this.txOsc:this.rxOsc
-        osc.SoundAt(when)
+	async Buzz(tx, when = null, rxTone = 69) {
+		if (tx) {
+			this.txOsc.SoundAt(when)
+		} else {
+			// Use sender's specific tone
+			let osc = this.getOrCreateRxOscillator(rxTone)
+			osc.SoundAt(when)
+		}
 	}
 
 	/**
@@ -285,10 +309,16 @@ class ToneBuzzer extends AudioBuzzer {
 	  *
 	  * @param {boolean} tx Transmit or receive tone
 	  * @param {number} when Time to end, in ms (0=now)
+	  * @param {number} rxTone MIDI note for RX (ignored if tx=true)
 	  */
-	async Silence(tx, when = null) {
-        let osc = tx?this.txOsc:this.rxOsc
-        osc.HushAt(when)
+	async Silence(tx, when = null, rxTone = 69) {
+		if (tx) {
+			this.txOsc.HushAt(when)
+		} else {
+			// Silence sender's specific tone
+			let osc = this.getOrCreateRxOscillator(rxTone)
+			osc.HushAt(when)
+		}
 	}
 }
 
@@ -376,12 +406,12 @@ class LampBuzzer extends Buzzer {
 
 class MIDIBuzzer extends Buzzer {
 	/**
-	 * 
+	 *
 	 * @param {AudioContext} context
 	 */
 	constructor(context) {
 		super(context)
-		this.SetMIDINote(69) // A4; 440Hz
+		this.adapterBuzzerTone = 69 // Default adapter buzzer tone (A4; 440Hz)
 
 		this.midiAccess = {outputs: []} // stub while we wait for async stuff
 		if (navigator.requestMIDIAccess) {
@@ -419,33 +449,36 @@ class MIDIBuzzer extends Buzzer {
 		)
 	}
 
-	async Buzz(tx, when=0) {
+	async Buzz(tx, when=0, rxTone=69) {
 		if (tx) {
 			return
 		}
-		this.sendAt(when, [0x90, this.note, 0x7f])
+		// Use sender's TX tone for MIDI note
+		this.sendAt(when, [0x90, rxTone, 0x7f])
 	}
 
-	async Silence(tx, when=0) {
+	async Silence(tx, when=0, rxTone=69) {
 		if (tx) {
 			return
 		}
 
-		this.sendAt(when, [0x80, this.note, 0x7f])
+		// Use sender's TX tone for MIDI note
+		this.sendAt(when, [0x80, rxTone, 0x7f])
 	}
 
 	/**
-	 * Set MIDI note for tx/rx tone
-	 * 
-	 * @param {Boolean} tx True to set transmit note
+	 * Set MIDI note for tx tone (also saves to adapter EEPROM)
+	 *
+	 * @param {Boolean} tx True to set transmit note (always true now)
 	 * @param {Number} note MIDI note to send
 	 */
 	SetMIDINote(tx, note) {
 		if (tx) {
+			// TX tone - send as CC 0x02 to save to adapter EEPROM
+			// This controls both repeater TX tone and adapter buzzer tone
 			this.sendAt(0, [0xB0, 0x02, note])
-		} else {
-			this.note = note
 		}
+		// No else - we removed the separate adapter buzzer tone slider
 	}
 }
 
@@ -486,23 +519,27 @@ class Collection extends AudioSource {
 
 	/**
 	 * Buzz all outputs.
-	 * 
+	 *
 	 * @param tx True if transmitting
+	 * @param when Time to begin
+	 * @param rxTone MIDI note for RX (sender's TX tone)
 	 */
-	Buzz(tx=False) {
+	Buzz(tx=false, when=null, rxTone=69) {
 		for (let b of this.collection) {
-			b.Buzz(tx)
+			b.Buzz(tx, when, rxTone)
 		}
 	}
 
 	/**
 	 * Silence all outputs in a single direction.
-	 * 
+	 *
 	 * @param tx True if transmitting
+	 * @param when Time to end
+	 * @param rxTone MIDI note for RX (sender's TX tone)
 	 */
-	Silence(tx=false) {
+	Silence(tx=false, when=null, rxTone=69) {
 		for (let b of this.collection) {
-			b.Silence(tx)
+			b.Silence(tx, when, rxTone)
 		}
 	}
 
@@ -515,7 +552,7 @@ class Collection extends AudioSource {
 	}
 
 	/**
-	 * 
+	 *
 	 * @param {Boolean} tx True to set transmit tone
 	 * @param {Number} note MIDI note to set
 	 */
@@ -529,14 +566,17 @@ class Collection extends AudioSource {
 
 	/**
 	 * Buzz for a certain duration at a certain time
-	 * 
+	 *
 	 * @param tx True if transmitting
 	 * @param when Time to begin
 	 * @param duration How long to buzz
+	 * @param rxTone MIDI note for RX (sender's TX tone)
 	 */
-	BuzzDuration(tx, when, duration) {
+	BuzzDuration(tx, when, duration, rxTone=69) {
 		for (let b of this.collection) {
-			b.BuzzDuration(tx, when, duration)
+			if (b.BuzzDuration) {
+				b.BuzzDuration(tx, when, duration, rxTone)
+			}
 		}
 	}
 

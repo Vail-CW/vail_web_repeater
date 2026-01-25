@@ -1,7 +1,7 @@
 The Vail Protocol
 =============
 
-Vail uses [WebSockets](https://en.wikipedia.org/wiki/WebSocket) at https://vail.woozle.org/chat?repeater=Foo. It accepts two subprotocols: both of these provide the same message information, in different encodings.
+Vail uses [WebSockets](https://en.wikipedia.org/wiki/WebSocket) at `wss://your-server/chat?repeater=Foo`. The official server is at https://vailmorse.com. It accepts two subprotocols: both of these provide the same message information, in different encodings.
 
 The server will accept packets in either format, but will only send packets in the format described by the subprotocol.
 
@@ -23,7 +23,7 @@ type Message struct {
 }
 ```
 
-# JSON: `json.vail.woozle.org`
+# JSON: `json.vailmorse.com`
 -------
 
 JSON-encoded Vail messages are a direct encoding of the struct:
@@ -40,7 +40,7 @@ This represents a transmission at Sun 17 Dec 2023 09:03:00 PM UTC, consisting of
 2 clients were connectd to the repeater at this time.
 
 
-Binary: `binary.vail.woozle.org`
+Binary: `binary.vailmorse.com`
 ---------------------
 
 The binary marshalled version of a Vail message is encoded big-endian:
@@ -62,22 +62,21 @@ This represents a transmission at Sun 17 Dec 2023 09:03:00 PM UTC, consisting of
 WebSockets
 ==========
 
-The reference Vail server accepts WebSockets communications to the path `/chat`,
+The Vail server accepts WebSockets communications to the path `/chat`,
 with the channel sent as the 'repeater' query parameter.
 
-For instance, the "Example" channel is
-wss://vail.woozle.org/chat?repeater=Example
+For instance, the "Example" channel on the official server is:
+wss://vailmorse.com/chat?repeater=Example
 
 The WebSockets subprotocol may be either:
 
-* `json.vail.woozle.org` for JSON packets
-* `binary.vail.woozle.org` for binary marshalled packets
+* `json.vailmorse.com` for JSON packets
+* `binary.vailmorse.com` for binary marshalled packets
 
 
 Practical Considerations
 ==================
 
-I am a network protocol designer:
 Vail was designed to contend with
 Internet latency and jitter.
 It relies heavily on an accurate Real-Time Clock on each client.
@@ -88,7 +87,7 @@ Playback Delay
 Clients should implement a delay on playback of all recieved messages,
 to allow for network latency and jitter.
 
-I have found that a 2-second delay is usually enough, but people on very high-latency links may need a larger delay.
+A 2-second delay is usually enough, but people on very high-latency links may need a larger delay.
 
 If the timestamp + delay on a recieved packet is after the current time of day,
 it may be appropriate to increase the delay.

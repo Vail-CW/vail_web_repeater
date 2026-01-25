@@ -27,7 +27,7 @@ const Second = Millisecond * 1000
 
 /** Vail server connection.
  *
- * This opens a websocket to the given repeater on vail.woozle.org,
+ * This opens a websocket to the given repeater on the current host,
  * and dispatches events to itself. Use .addEventListener to set up
  * event handlers as you desire.
  *
@@ -55,7 +55,8 @@ class Vail extends EventTarget {
 		super()
 
 		/** URL to our WebSocket */
-		this.url = new URL("wss://vail.woozle.org/chat")
+		let wsProtocol = location.protocol === "https:" ? "wss:" : "ws:"
+		this.url = new URL(`${wsProtocol}//${location.host}/chat`)
 		this.url.searchParams.set("repeater", repeater)
 
 		/** Delay to add */
@@ -90,7 +91,7 @@ class Vail extends EventTarget {
 		this.offset = 0
 
 		/** Our current websocket */
-		this.socket = new WebSocket(this.url, ["json.vail.woozle.org"])
+		this.socket = new WebSocket(this.url, ["json.vailmorse.com"])
 		this.socket.addEventListener("close", event => {
 			addTimeout(() => this.reopen(), this.reconnectDelay)
 		})
@@ -186,7 +187,7 @@ vail.addEventListener("nosound", event => sound(event, false))
 	<body>
 		<h1>Vail API Demo</h1>
 
-		<div><a href="https://vail.woozle.org/#demo" target="_blank">Repeater</a></div>
+		<div><a href="/#demo" target="_blank">Repeater</a></div>
 		<div>Sounder: <span id="sounder"></span></div>
 		<div>Clients: <span id="nclients">0</span></div>
 

@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Vail - Enigma Admin</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+
+		<!-- Bulma CSS -->
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@6.5.95/css/materialdesignicons.min.css">
+
+		<!-- Vail stuff -->
+		<link rel="manifest" href="manifest.json">
+		<link rel="icon" href="assets/vail.png" sizes="256x256" type="image/png">
+		<link rel="icon" href="assets/vail.svg" sizes="any" type="image/svg+xml">
+		<script type="module" src="scripts/enigma-admin.mjs?v=1.2.1"></script>
+		<link rel="stylesheet" href="vail.css?v=1.2.1">
+		<link rel="stylesheet" href="dark.css?v=1.2.1">
+		<style>
+			.enigma-form-container {
+				background: rgba(0, 209, 178, 0.03);
+				border-radius: 12px;
+				padding: 2rem;
+			}
+
+			.current-puzzle-box {
+				background: rgba(0, 134, 102, 0.1);
+				border: 1px solid rgba(0, 134, 102, 0.3);
+				border-radius: 8px;
+				padding: 1.5rem;
+				margin-bottom: 2rem;
+			}
+
+			.setting-group {
+				background: rgba(0, 0, 0, 0.2);
+				border-radius: 8px;
+				padding: 1rem;
+				margin-bottom: 1rem;
+			}
+
+			.setting-group-title {
+				color: #00d1b2;
+				font-weight: 600;
+				margin-bottom: 0.75rem;
+				font-size: 0.9rem;
+			}
+
+			.rotor-inputs {
+				display: flex;
+				gap: 0.5rem;
+			}
+
+			.rotor-inputs .field {
+				flex: 1;
+			}
+
+			.rotor-label {
+				font-size: 0.75rem;
+				color: #7a7a7a;
+				text-align: center;
+				margin-bottom: 0.25rem;
+			}
+
+			.message-preview {
+				font-family: monospace;
+				background: rgba(0, 0, 0, 0.3);
+				padding: 1rem;
+				border-radius: 6px;
+				white-space: pre-wrap;
+				word-break: break-all;
+				color: #e8e8e8;
+			}
+
+			.not-admin-message {
+				text-align: center;
+				padding: 4rem 2rem;
+			}
+
+			.not-admin-message .icon {
+				font-size: 4rem;
+				color: #ff3860;
+				margin-bottom: 1rem;
+			}
+
+			/* Make bold text readable on dark backgrounds */
+			.setting-group strong {
+				color: #00d1b2;
+			}
+
+			.notification.is-info.is-light strong {
+				color: #1d72aa;
+			}
+		</style>
+	</head>
+	<body>
+		<nav class="navbar is-dark">
+			<div class="navbar-brand">
+				<a class="navbar-item" href="index.html">
+					<img class="" src="assets/vail.svg" alt="">
+					<div class="block">Vail</div>
+				</a>
+				<a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" id="navbar-burger">
+					<span aria-hidden="true"></span>
+					<span aria-hidden="true"></span>
+					<span aria-hidden="true"></span>
+				</a>
+			</div>
+			<div class="navbar-menu navbar-menu-centered" id="navbar-menu">
+				<div class="navbar-start"></div>
+				<div class="navbar-center">
+					<a class="navbar-item" href="index.html">
+						<span class="icon"><i class="mdi mdi-radio-tower"></i></span>
+						<span>Repeater</span>
+					</a>
+					<a class="navbar-item" href="events.html">
+						<span class="icon"><i class="mdi mdi-calendar-clock"></i></span>
+						<span>Events</span>
+					</a>
+					<a class="navbar-item is-active" href="enigma-admin.html">
+						<span class="icon"><i class="mdi mdi-cog-box"></i></span>
+						<span>Enigma Admin</span>
+					</a>
+				</div>
+				<div class="navbar-end"></div>
+			</div>
+		</nav>
+
+		<section class="section">
+			<div class="container is-max-desktop">
+				<!-- Not Admin Message (hidden by default, shown for non-admins) -->
+				<div id="not-admin-section" style="display: none;">
+					<div class="not-admin-message">
+						<span class="icon">
+							<i class="mdi mdi-lock"></i>
+						</span>
+						<h2 class="title is-4">Admin Access Required</h2>
+						<p class="has-text-grey-light">
+							This page is only accessible to administrators.<br>
+							Please log in with an admin callsign to manage the Weekly Enigma puzzle.
+						</p>
+						<a href="index.html" class="button is-primary mt-4">
+							<span class="icon"><i class="mdi mdi-arrow-left"></i></span>
+							<span>Back to Repeater</span>
+						</a>
+					</div>
+				</div>
+
+				<!-- Admin Content (hidden by default, shown for admins) -->
+				<div id="admin-section" style="display: none;">
+					<div class="level mb-5">
+						<div class="level-left">
+							<div class="level-item">
+								<div>
+									<h1 class="title is-3 mb-3">
+										<span class="icon-text">
+											<span class="icon"><i class="mdi mdi-cog-box"></i></span>
+											<span>Weekly Enigma Admin</span>
+										</span>
+									</h1>
+									<p class="subtitle is-6 has-text-grey-light mt-2">Create and manage the Weekly Enigma puzzle</p>
+									<div class="notification is-info is-light" style="margin-top: 1rem;">
+										<p class="is-size-7">
+											<strong>Important:</strong> This puzzle uses the <strong>Enigma M3</strong> model.
+											Use <a href="https://cryptii.com/pipes/enigma-machine" target="_blank">cryptii.com/pipes/enigma-machine</a>
+											to encode your messages with the M3 machine settings before entering them here.
+										</p>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<!-- Current Puzzle Display -->
+					<div class="current-puzzle-box" id="current-puzzle-section">
+						<h3 class="title is-5 mb-3">
+							<span class="icon-text">
+								<span class="icon"><i class="mdi mdi-puzzle"></i></span>
+								<span>Current Puzzle</span>
+							</span>
+						</h3>
+						<div id="current-puzzle-content">
+							<p class="has-text-grey-light">Loading current puzzle...</p>
+						</div>
+					</div>
+
+					<!-- Puzzle Form -->
+					<div class="enigma-form-container">
+						<h3 class="title is-5 mb-4">
+							<span class="icon-text">
+								<span class="icon"><i class="mdi mdi-pencil"></i></span>
+								<span>Create/Update Puzzle</span>
+							</span>
+						</h3>
+
+						<form id="enigma-form">
+							<!-- Enigma Settings Section -->
+							<div class="setting-group">
+								<div class="setting-group-title">
+									<span class="icon"><i class="mdi mdi-cog"></i></span>
+									Enigma M3 Machine Settings
+								</div>
+
+								<!-- Rotors -->
+								<div class="field">
+									<label class="label is-small">Rotors (Left - Middle - Right)</label>
+									<div class="rotor-inputs">
+										<div class="field">
+											<div class="rotor-label">Left</div>
+											<div class="control">
+												<div class="select is-fullwidth">
+													<select id="rotor-left">
+														<option value="I">I</option>
+														<option value="II">II</option>
+														<option value="III" selected>III</option>
+														<option value="IV">IV</option>
+														<option value="V">V</option>
+													</select>
+												</div>
+											</div>
+										</div>
+										<div class="field">
+											<div class="rotor-label">Middle</div>
+											<div class="control">
+												<div class="select is-fullwidth">
+													<select id="rotor-middle">
+														<option value="I">I</option>
+														<option value="II" selected>II</option>
+														<option value="III">III</option>
+														<option value="IV">IV</option>
+														<option value="V">V</option>
+													</select>
+												</div>
+											</div>
+										</div>
+										<div class="field">
+											<div class="rotor-label">Right</div>
+											<div class="control">
+												<div class="select is-fullwidth">
+													<select id="rotor-right">
+														<option value="I" selected>I</option>
+														<option value="II">II</option>
+														<option value="III">III</option>
+														<option value="IV">IV</option>
+														<option value="V">V</option>
+													</select>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+
+								<!-- Start Positions -->
+								<div class="field">
+									<label class="label is-small">Start Positions (Left - Middle - Right)</label>
+									<div class="rotor-inputs">
+										<div class="field">
+											<div class="rotor-label">Left</div>
+											<div class="control">
+												<input class="input" type="text" id="position-left" maxlength="1" value="A" style="text-transform: uppercase; text-align: center;">
+											</div>
+										</div>
+										<div class="field">
+											<div class="rotor-label">Middle</div>
+											<div class="control">
+												<input class="input" type="text" id="position-middle" maxlength="1" value="A" style="text-transform: uppercase; text-align: center;">
+											</div>
+										</div>
+										<div class="field">
+											<div class="rotor-label">Right</div>
+											<div class="control">
+												<input class="input" type="text" id="position-right" maxlength="1" value="A" style="text-transform: uppercase; text-align: center;">
+											</div>
+										</div>
+									</div>
+								</div>
+
+								<!-- Ring Settings -->
+								<div class="field">
+									<label class="label is-small">Ring Settings (Left - Middle - Right)</label>
+									<div class="rotor-inputs">
+										<div class="field">
+											<div class="rotor-label">Left</div>
+											<div class="control">
+												<input class="input" type="number" id="ring-left" min="1" max="26" value="1" style="text-align: center;">
+											</div>
+										</div>
+										<div class="field">
+											<div class="rotor-label">Middle</div>
+											<div class="control">
+												<input class="input" type="number" id="ring-middle" min="1" max="26" value="1" style="text-align: center;">
+											</div>
+										</div>
+										<div class="field">
+											<div class="rotor-label">Right</div>
+											<div class="control">
+												<input class="input" type="number" id="ring-right" min="1" max="26" value="1" style="text-align: center;">
+											</div>
+										</div>
+									</div>
+								</div>
+
+								<!-- Reflector -->
+								<div class="field">
+									<label class="label is-small">Reflector</label>
+									<div class="control">
+										<div class="select">
+											<select id="reflector">
+												<option value="A">Reflector A</option>
+												<option value="B" selected>Reflector B</option>
+												<option value="C">Reflector C</option>
+											</select>
+										</div>
+									</div>
+								</div>
+
+								<!-- Plugboard -->
+								<div class="field">
+									<label class="label is-small">Plugboard Connections</label>
+									<div class="control">
+										<input class="input" type="text" id="plugboard" placeholder="e.g., AB CD EF GH IJ KL" style="text-transform: uppercase;">
+									</div>
+									<p class="help">Enter letter pairs separated by spaces (e.g., "AB CD EF" swaps A↔B, C↔D, E↔F)</p>
+								</div>
+							</div>
+
+							<!-- Messages Section -->
+							<div class="setting-group">
+								<div class="setting-group-title">
+									<span class="icon"><i class="mdi mdi-message-text"></i></span>
+									Messages
+								</div>
+
+								<!-- Encoded Message -->
+								<div class="field">
+									<label class="label is-small">Encoded Message (sent as morse)</label>
+									<div class="control">
+										<textarea class="textarea" id="encoded-message" rows="3" placeholder="Enter the encoded message that users will hear..." style="text-transform: uppercase; font-family: monospace;"></textarea>
+									</div>
+									<p class="help">This is the ciphertext that will be played as morse code at 17 WPM</p>
+								</div>
+
+								<!-- Decoded Message -->
+								<div class="field">
+									<label class="label is-small">Decoded Message (answer)</label>
+									<div class="control">
+										<textarea class="textarea" id="decoded-message" rows="3" placeholder="Enter the correct decoded message..." style="text-transform: uppercase; font-family: monospace;"></textarea>
+									</div>
+									<p class="help">This is the plaintext answer users must enter to solve the puzzle</p>
+								</div>
+							</div>
+
+							<!-- Save Options -->
+							<div class="setting-group">
+								<div class="setting-group-title">
+									<span class="icon"><i class="mdi mdi-content-save-cog"></i></span>
+									Save Options
+								</div>
+								<div class="field">
+									<div class="control">
+										<label class="radio">
+											<input type="radio" name="save-mode" value="update" checked>
+											<strong>Update current puzzle</strong>
+											<span class="has-text-grey-light is-size-7"> - Users who already solved it cannot solve again</span>
+										</label>
+									</div>
+									<div class="control mt-2">
+										<label class="radio">
+											<input type="radio" name="save-mode" value="new">
+											<strong>Create new puzzle</strong>
+											<span class="has-text-grey-light is-size-7"> - Resets for all users (new week)</span>
+										</label>
+									</div>
+								</div>
+								<p class="help mt-2">
+									<span class="icon is-small"><i class="mdi mdi-information"></i></span>
+									Choose "Create new puzzle" when starting a new week. This allows everyone to solve again and earn another leaderboard point.
+								</p>
+							</div>
+
+							<!-- Submit Button -->
+							<div class="field mt-5">
+								<div class="control">
+									<button type="submit" class="button is-success is-medium is-fullwidth" id="save-puzzle-btn">
+										<span class="icon">
+											<i class="mdi mdi-content-save"></i>
+										</span>
+										<span>Save Puzzle</span>
+									</button>
+								</div>
+							</div>
+						</form>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- Admin Password Modal -->
+		<div class="modal" id="admin-password-modal">
+			<div class="modal-background"></div>
+			<div class="modal-card">
+				<header class="modal-card-head">
+					<p class="modal-card-title">
+						<span class="icon-text">
+							<span class="icon"><i class="mdi mdi-shield-lock"></i></span>
+							<span>Admin Authentication</span>
+						</span>
+					</p>
+					<button class="delete" aria-label="close" id="close-password-modal-btn"></button>
+				</header>
+				<section class="modal-card-body">
+					<p class="mb-4">Please enter the admin password to continue.</p>
+					<form id="admin-password-form">
+						<div class="field">
+							<label class="label">Admin Password</label>
+							<div class="control has-icons-left">
+								<input class="input" type="password" id="admin-password-input" placeholder="Enter password">
+								<span class="icon is-small is-left">
+									<i class="mdi mdi-key"></i>
+								</span>
+							</div>
+						</div>
+						<p id="password-error" class="help is-danger" style="display: none;">Invalid password. Please try again.</p>
+					</form>
+				</section>
+				<footer class="modal-card-foot">
+					<button class="button is-success" id="confirm-password-btn">Authenticate</button>
+					<button class="button" id="cancel-password-btn">Cancel</button>
+				</footer>
+			</div>
+		</div>
+
+		<!-- Success Message -->
+		<div id="success-toast" class="notification is-success" style="display: none; position: fixed; bottom: 20px; right: 20px; z-index: 1000; max-width: 400px;">
+			<button class="delete" id="close-toast-btn"></button>
+			<span id="success-toast-message"><strong>Success!</strong> The puzzle has been saved.</span>
+		</div>
+	</body>
+</html>

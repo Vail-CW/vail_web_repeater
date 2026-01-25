@@ -1,1 +1,34 @@
+# Build artifacts
+build/*.exe
+build/vail
+
+# Deployment files (contain secrets/credentials)
+DEPLOY.md
+deploy.bat
+deploy.sh
+
+# Local data files
+events.json
+
+# Claude Code / AI assistance files
+.claude/
+CLAUDE.md
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Internationalization (not yet implemented)
 i18n
+
+# Environment files
+.env
+.env.local
+.env.*.local

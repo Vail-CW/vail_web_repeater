@@ -4,9 +4,9 @@ set -e
 
 cd $(dirname $0)/..
 
-target=vail
-VERSION=$(cat CHANGELOG.md | awk -F '[][]' '/^## \[/ {print $2; exit}')
-tag=nealey/$target:$VERSION
+target=vail-repeater
+VERSION=${1:-latest}
+tag=$target:$VERSION
 
 echo "==== Building $tag"
 docker build \

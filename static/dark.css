@@ -1,25 +1,285 @@
-@media (prefers-color-scheme: dark) {
-    html {
-        background-color: black;
+/* Force dark mode for all users */
+html {
+    background-color: #0a0a0a;
+}
+
+body {
+    background-color: #0a0a0a;
+}
+
+/* Navbar dark mode - force on all devices including mobile */
+nav.navbar,
+nav.navbar.is-dark,
+.navbar {
+    background-color: #363636 !important;
+    border-bottom: 1px solid #4a4a4a !important;
+}
+
+.navbar-menu,
+.navbar-menu.is-active {
+    background-color: #363636 !important;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4) !important;
+}
+
+.navbar-brand,
+.navbar-brand .navbar-item {
+    background-color: #363636 !important;
+}
+
+.navbar-burger,
+.navbar-burger span {
+    color: #e8e8e8 !important;
+}
+
+.navbar-burger:hover {
+    background-color: rgba(0, 134, 102, 0.15) !important;
+}
+
+.navbar-dropdown {
+    background-color: #2a2a2a !important;
+    border-top: 2px solid #086 !important;
+}
+
+/* Mobile navbar fix */
+@media screen and (max-width: 1023px) {
+    .navbar-menu {
+        background-color: #363636 !important;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4) !important;
     }
 
-    .box {
-        background-color: #222;
+    .navbar-item {
+        background-color: transparent !important;
     }
 
-    .input, .button, .textarea, .select select {
-        background-color: #444;
+    .navbar-item:hover {
+        background-color: rgba(0, 134, 102, 0.15) !important;
     }
+}
 
-    html, .box, .title, .label, .input, .button, .textarea, .select select {
-        color: white;
+/* Navbar text brightness */
+.navbar-item,
+.navbar-link {
+    color: #e8e8e8 !important;
+}
+
+.navbar-item:hover,
+.navbar-link:hover {
+    color: #ffffff !important;
+    background-color: rgba(0, 134, 102, 0.15) !important;
+}
+
+.box {
+    background-color: #1a1a1a;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.box:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+}
+
+.input, .button, .textarea, .select select {
+    background-color: #2a2a2a;
+    border-color: #3a3a3a;
+}
+
+.input:focus, .textarea:focus, .select select:focus {
+    background-color: #333;
+    border-color: #086;
+    box-shadow: 0 0 0 3px rgba(0, 134, 102, 0.2);
+}
+
+html, .box, .title, .label, .input, .button, .textarea, .select select {
+    color: #e0e0e0;
+}
+
+.button.is-primary {
+    background-color: #086;
+    color: white;
+}
+
+.button.is-primary:hover {
+    background-color: #097;
+}
+
+input[type=range] {
+    accent-color: #086;
+}
+
+.charts-container {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+.user-list-item {
+    background-color: rgba(0, 134, 102, 0.1);
+}
+
+.user-list-item:hover {
+    background-color: rgba(0, 134, 102, 0.15);
+}
+
+.user-list-item .callsign {
+    color: #0af;
+}
+
+.user-list-item.transmitting {
+    background-color: rgba(255, 165, 0, 0.2);
+}
+
+.help {
+    color: #999;
+}
+
+kbd {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+    border: 1px solid #444;
+}
+
+.room-item {
+    background-color: rgba(0, 134, 102, 0.08);
+}
+
+.room-item:hover {
+    background-color: rgba(0, 134, 102, 0.15);
+    border-color: rgba(0, 134, 102, 0.4);
+}
+
+.room-item.active {
+    background-color: rgba(0, 134, 102, 0.2);
+    border-color: #086;
+}
+
+.room-name {
+    color: #0af;
+}
+
+.room-count {
+    color: #999;
+}
+
+/* Modal dark theme */
+.modal-card {
+    background-color: #1a1a1a;
+}
+
+.modal-card-head {
+    background-color: #2a2a2a;
+    border-bottom: 1px solid #3a3a3a;
+}
+
+.modal-card-title {
+    color: #e0e0e0;
+}
+
+.modal-card-body {
+    background-color: #1a1a1a;
+}
+
+.modal-card-foot {
+    background-color: #2a2a2a;
+    border-top: 1px solid #3a3a3a;
+}
+
+.delete {
+    background-color: #3a3a3a;
+}
+
+.delete:hover {
+    background-color: #4a4a4a;
+}
+
+/* Chat dark theme */
+.chat-messages {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+.chat-message {
+    background-color: rgba(0, 134, 102, 0.1);
+    border-left-color: #086;
+}
+
+.chat-sender {
+    color: #0af;
+}
+
+.chat-time {
+    color: #999;
+}
+
+.chat-message-text {
+    color: #e0e0e0;
+}
+
+/* Inline chat dark theme */
+.chat-messages-inline {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+/* Tabs dark theme */
+.tabs ul {
+    border-bottom-color: #3a3a3a;
+}
+
+.tabs li.has-notification a {
+    background-color: rgba(255, 56, 96, 0.25) !important;
+    color: #ff6b81 !important;
+}
+
+.tabs li:not(.is-active):hover a {
+    background-color: rgba(0, 134, 102, 0.1);
+    border-bottom-color: rgba(0, 134, 102, 0.4);
+}
+
+.tabs li.is-active a {
+    border-bottom-color: #086;
+    color: #086 !important;
+}
+
+.tabs.is-boxed li.is-active a {
+    background-color: transparent !important;
+    border-color: #086 !important;
+    color: #086 !important;
+}
+
+.tabs a {
+    color: #999;
+}
+
+/* Settings dropdown dark theme */
+.settings-dropdown-content {
+    background-color: #1a1a1a;
+    border: 1px solid #3a3a3a;
+}
+
+.settings-dropdown-inner {
+    background-color: #1a1a1a;
+}
+
+/* Toggle Switch Dark Mode */
+.toggle-label {
+    background-color: #3a3a3a;
+}
+
+.toggle-label:hover {
+    background-color: #4a4a4a;
+}
+
+.toggle-input:checked + .toggle-label {
+    background-color: #086;
+}
+
+.toggle-input:checked + .toggle-label:hover {
+    background-color: #097;
+}
+
+/* Break In warning animation dark mode */
+@keyframes break-in-warning {
+    0%, 100% {
+        background-color: rgba(255, 56, 96, 0.2);
+        box-shadow: 0 0 0 0 rgba(255, 56, 96, 0.5);
     }
-
-    .button.is-primary {
-        background-color: #086;
-    }
-
-    input[type=range] {
-        accent-color: #086;
+    50% {
+        background-color: rgba(255, 56, 96, 0.35);
+        box-shadow: 0 0 12px 3px rgba(255, 56, 96, 0.7);
     }
 }
