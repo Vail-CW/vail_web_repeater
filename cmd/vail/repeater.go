@@ -142,7 +142,7 @@ func (r *Repeater) HasCallsign(callsign string) bool {
 func (r *Repeater) GetUserList() []string {
 	users := make([]string, 0, len(r.clients))
 	for _, c := range r.clients {
-		if c.callsign != "" {
+		if c.callsign != "" && !isHiddenCallsign(c.callsign) {
 			users = append(users, c.callsign)
 		}
 	}
@@ -155,7 +155,7 @@ func (r *Repeater) GetUsersInfo() []UserInfo {
 	log.Printf("GetUsersInfo: %d clients total\n", len(r.clients))
 	for _, c := range r.clients {
 		log.Printf("  Client: callsign='%s', txTone=%d\n", c.callsign, c.txTone)
-		if c.callsign != "" {
+		if c.callsign != "" && !isHiddenCallsign(c.callsign) {
 			users = append(users, UserInfo{
 				Callsign: c.callsign,
 				TxTone:   c.txTone,
@@ -168,7 +168,7 @@ func (r *Repeater) GetUsersInfo() []UserInfo {
 
 // Send send a message to all connected clients
 func (r *Repeater) Send(m Message) {
-	m.Clients = uint16(r.Listeners())
+	m.Clients = uint16(r.VisibleListeners())
 	m.Users = r.GetUserList()
 	m.UsersInfo = r.GetUsersInfo() // Include detailed user info with TX tones
 	m.Decoder = r.decoder          // Include decoder setting for this room
@@ -195,9 +195,27 @@ func (r *Repeater) SendMessage(durations ...time.Duration) {
 	r.Send(m)
 }
 
-// Listeners returns the number of connected clients
+// Listeners returns the number of connected clients.
+//
+// This is the raw connection count and intentionally includes hidden
+// (monitoring) clients. It drives room lifecycle (stale cleanup), so a room
+// with only a monitor connected must NOT be considered empty — otherwise the
+// room entry could be deleted while the monitor's socket is still attached.
 func (r *Repeater) Listeners() int {
 	return len(r.clients)
+}
+
+// VisibleListeners returns the number of connected clients excluding hidden
+// (monitoring) clients. This is the count shown to other users and in the
+// public room list, so automated monitors don't appear as participants.
+func (r *Repeater) VisibleListeners() int {
+	count := 0
+	for _, c := range r.clients {
+		if !isHiddenCallsign(c.callsign) {
+			count++
+		}
+	}
+	return count
 }
 
 // AddChatMessage adds a chat message to the history buffer

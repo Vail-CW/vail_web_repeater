@@ -112,7 +112,9 @@ func (b *Book) GetRooms() []RoomInfo {
 	rooms := make([]RoomInfo, 0, len(b.entries))
 	for name, repeater := range b.entries {
 		isPrivate := repeater.IsPrivate()
-		userCount := repeater.Listeners()
+		// Use the visible count so rooms occupied only by a hidden monitor are
+		// not advertised as having users.
+		userCount := repeater.VisibleListeners()
 		log.Printf("GetRooms: Room '%s' IsPrivate=%v, Users=%d\n", name, isPrivate, userCount)
 		if !isPrivate && userCount > 0 {
 			rooms = append(rooms, RoomInfo{
@@ -257,8 +259,8 @@ func (b *Book) handleEvent(event bookEvent) {
 		log.Printf("Room '%s' IsPrivate=%v, Listeners=%d\n", event.name, repeater.IsPrivate(), repeater.Listeners())
 
 		// Send Discord notification for public rooms
-		// Skip if this is a reconnection
-		if !repeater.IsPrivate() && event.callsign != "" && !isReconnect {
+		// Skip if this is a reconnection, or a hidden (monitoring) client
+		if !repeater.IsPrivate() && event.callsign != "" && !isReconnect && !isHiddenCallsign(event.callsign) {
 			NotifyUserJoined(event.name, event.callsign)
 			log.Printf("Discord: NEW join for %s in %s\n", event.callsign, event.name)
 		} else if isReconnect {
@@ -284,7 +286,8 @@ func (b *Book) handleEvent(event bookEvent) {
 		}
 
 		// Send Discord notification for public rooms
-		if !isPrivate && callsign != "" {
+		// Skip hidden (monitoring) clients
+		if !isPrivate && callsign != "" && !isHiddenCallsign(callsign) {
 			NotifyUserLeft(event.name, callsign)
 		}
 

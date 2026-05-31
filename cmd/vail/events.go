@@ -221,6 +221,47 @@ func isAdminCallsign(callsign string) bool {
 	return false
 }
 
+// defaultHiddenCallsigns are callsigns that are always hidden from the public
+// user list. These are automated/monitoring clients (e.g. the RBN skimmer
+// monitor) that connect as participants but shouldn't be shown as users.
+var defaultHiddenCallsigns = []string{"VailReRBN-monitor"}
+
+// getHiddenCallsigns returns callsigns that should be omitted from the user
+// list: the built-in defaults plus any configured via the HIDDEN_CALLSIGNS
+// environment variable (comma or semicolon separated).
+func getHiddenCallsigns() []string {
+	result := make([]string, 0, len(defaultHiddenCallsigns)+2)
+	result = append(result, defaultHiddenCallsigns...)
+
+	hiddenEnv := os.Getenv("HIDDEN_CALLSIGNS")
+	if hiddenEnv != "" {
+		// Replace semicolons with commas for consistent splitting
+		// (semicolons are used in deploy scripts since commas delimit env vars)
+		hiddenEnv = strings.ReplaceAll(hiddenEnv, ";", ",")
+		for _, cs := range strings.Split(hiddenEnv, ",") {
+			if trimmed := strings.TrimSpace(cs); trimmed != "" {
+				result = append(result, trimmed)
+			}
+		}
+	}
+	return result
+}
+
+// isHiddenCallsign reports whether a callsign should be filtered out of the
+// public user list (case-insensitive match against the hidden callsigns).
+func isHiddenCallsign(callsign string) bool {
+	callsignUpper := strings.ToUpper(strings.TrimSpace(callsign))
+	if callsignUpper == "" {
+		return false
+	}
+	for _, hidden := range getHiddenCallsigns() {
+		if strings.ToUpper(hidden) == callsignUpper {
+			return true
+		}
+	}
+	return false
+}
+
 // getAdminPassword returns the configured admin password
 func getAdminPassword() string {
 	adminPassword := os.Getenv("ADMIN_PASSWORD")
