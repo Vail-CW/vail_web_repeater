@@ -7,6 +7,11 @@ DEPLOY.md
 deploy.bat
 deploy.sh
 
+# Root Dockerfile is a deploy-time artifact for `gcloud run deploy --source .`
+# (copied from build/Dockerfile by the deploy process). The canonical
+# Dockerfile lives at build/Dockerfile and IS tracked.
+/Dockerfile
+
 # Local data files
 events.json
 
