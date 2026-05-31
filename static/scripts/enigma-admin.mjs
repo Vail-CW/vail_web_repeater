@@ -3,8 +3,14 @@
  * Manages the Weekly Enigma puzzle for admins
  */
 
+import { decodeWithVailSettings, parsePlugboard, validatePlugboard } from './enigma-machine.mjs';
+
 // Admin callsigns loaded from server
 let adminCallsigns = [];
+
+// Tracks whether the admin has acknowledged a failing validation and chosen
+// to save anyway (reset whenever the form changes).
+let validationOverride = false;
 
 let adminPassword = null;
 let currentPuzzle = null;
@@ -228,6 +234,10 @@ function populateForm(puzzle) {
 	if (puzzle.decodedMessage) {
 		document.getElementById('decoded-message').value = puzzle.decodedMessage;
 	}
+
+	// Show validation status for the loaded puzzle right away.
+	validationOverride = false;
+	validateAndRender();
 }
 
 /**
@@ -297,6 +307,193 @@ function validateForm(puzzle) {
 }
 
 /**
+ * Strip everything except A-Z and uppercase. Mirrors the server-side
+ * normalizeAnswer used to grade solver submissions.
+ */
+function lettersOnly(s) {
+	return (s || '').toUpperCase().replace(/[^A-Z]/g, '');
+}
+
+/**
+ * Render the answer with word separators collapsed to a single "X", the way
+ * a solver's raw Enigma output looks (e.g. "HELLO WORLD" -> "HELLOXWORLD").
+ */
+function spacesToX(s) {
+	return (s || '')
+		.toUpperCase()
+		.replace(/[^A-Z]+/g, 'X')   // runs of non-letters become a separator X
+		.replace(/^X+|X+$/g, '');   // drop leading/trailing separators
+}
+
+/**
+ * Validate the puzzle by actually running the ciphertext back through the
+ * Enigma engine with the chosen settings and checking it produces the answer.
+ *
+ * Returns { status: 'ok' | 'warn' | 'error', decoded, issues: [...] }
+ * where each issue is { level: 'error' | 'warn' | 'info', message }.
+ */
+function runValidation(puzzle) {
+	const issues = [];
+	const settings = puzzle.settings || {};
+
+	// --- Static setting checks -------------------------------------------------
+
+	// Positions must be single letters A-Z
+	for (const pos of settings.rotorPositions || []) {
+		if (!/^[A-Z]$/.test(pos)) {
+			issues.push({ level: 'error', message: `Start position "${pos || '(blank)'}" must be a single letter A-Z.` });
+		}
+	}
+
+	// Ring settings must be 1-26
+	for (const ring of settings.ringSettings || []) {
+		const num = parseInt(ring, 10);
+		if (isNaN(num) || num < 1 || num > 26) {
+			issues.push({ level: 'error', message: `Ring setting "${ring}" must be a number from 1 to 26.` });
+		}
+	}
+
+	// A real Enigma cannot use the same rotor in two slots
+	const rotors = settings.rotors || [];
+	const dupes = rotors.filter((r, i) => rotors.indexOf(r) !== i);
+	if (dupes.length > 0) {
+		issues.push({
+			level: 'warn',
+			message: `Rotor ${[...new Set(dupes)].join(', ')} is used more than once. A physical Enigma can't reuse a rotor, so solvers won't be able to reproduce these settings.`,
+		});
+	}
+
+	// Plugboard format
+	const plugPairs = parsePlugboard(settings.plugboard);
+	const plugResult = validatePlugboard(plugPairs);
+	if (plugResult !== true) {
+		issues.push({ level: 'error', message: plugResult });
+	}
+
+	// --- The core check: does it actually decode to the answer? ---------------
+
+	let decoded = '';
+	const hasCipher = !!lettersOnly(puzzle.encodedMessage);
+	const hasAnswer = !!lettersOnly(puzzle.decodedMessage);
+
+	// Don't attempt a decode if settings are structurally broken.
+	const settingsBroken = issues.some(i => i.level === 'error');
+
+	if (hasCipher && !settingsBroken) {
+		try {
+			decoded = decodeWithVailSettings(puzzle.encodedMessage, settings);
+		} catch (e) {
+			issues.push({ level: 'error', message: `Could not run the Enigma engine: ${e.message}` });
+		}
+	}
+
+	if (hasCipher && hasAnswer && decoded) {
+		const answerNoSep = lettersOnly(puzzle.decodedMessage);
+		const answerSpaceX = spacesToX(puzzle.decodedMessage);
+
+		const matchesExact = decoded === answerNoSep;
+		const matchesAsSeparators = decoded === answerSpaceX;
+
+		if (matchesExact || matchesAsSeparators) {
+			// Decodes correctly. One caveat worth flagging: if the stored answer
+			// itself contains X word-separators, solvers who follow the on-screen
+			// "remove the X" instruction will be graded wrong, because the
+			// leaderboard check compares against the exact stored answer.
+			if (matchesExact && decoded.includes('X') && lettersOnly(puzzle.decodedMessage).includes('X')) {
+				issues.push({
+					level: 'warn',
+					message: 'Your answer contains "X". If those X\'s are word separators, store the answer the way solvers actually type it (X\'s removed, e.g. "HELLO WORLD") — the leaderboard compares against your exact answer text, and solvers are told to drop the X\'s.',
+				});
+			}
+		} else {
+			issues.push({
+				level: 'error',
+				message: `These settings do NOT decode the ciphertext to your answer. Solvers will not be able to solve this puzzle. Double-check the rotors, start positions, ring settings, reflector and plugboard.`,
+			});
+		}
+	} else if (!hasCipher) {
+		issues.push({ level: 'info', message: 'Enter the encoded message to validate it against your answer.' });
+	} else if (!hasAnswer) {
+		issues.push({ level: 'info', message: 'Enter the decoded message (answer) to validate it.' });
+	}
+
+	let status = 'ok';
+	if (issues.some(i => i.level === 'error')) {
+		status = 'error';
+	} else if (issues.some(i => i.level === 'warn')) {
+		status = 'warn';
+	}
+
+	return { status, decoded, issues, hasCipher, hasAnswer, settingsBroken };
+}
+
+/**
+ * Render the validation result into the on-page panel.
+ */
+function renderValidation(result) {
+	const panel = document.getElementById('validation-panel');
+	if (!panel) return;
+
+	const { status, decoded, issues, hasCipher, settingsBroken } = result;
+
+	// Color + headline by status
+	let cls, icon, headline;
+	if (status === 'error') {
+		cls = 'is-danger';
+		icon = 'mdi-alert-circle';
+		headline = 'This puzzle will not be solvable';
+	} else if (status === 'warn') {
+		cls = 'is-warning';
+		icon = 'mdi-alert';
+		headline = 'Decodes correctly — but check the warnings';
+	} else {
+		cls = 'is-success';
+		icon = 'mdi-check-circle';
+		headline = 'Verified — these settings decode to your answer';
+	}
+
+	const issuesHtml = issues.map(i => {
+		const iIcon = i.level === 'error' ? 'mdi-close-circle'
+			: i.level === 'warn' ? 'mdi-alert'
+			: 'mdi-information';
+		return `<li><span class="icon is-small"><i class="mdi ${iIcon}"></i></span> ${escapeHtml(i.message)}</li>`;
+	}).join('');
+
+	// Show what the ciphertext actually decodes to, so the admin can eyeball it.
+	let decodeHtml = '';
+	if (hasCipher && !settingsBroken && decoded) {
+		const grouped = (decoded.match(/.{1,5}/g) || []).join(' ');
+		decodeHtml = `
+			<p class="is-size-7 mt-2" style="margin-bottom: 0.25rem; color: #fff; font-weight: 700;"><strong style="color: inherit;">Decodes to (raw output a solver gets):</strong></p>
+			<div class="message-preview" style="font-family: monospace;">${escapeHtml(decoded)}</div>
+			<p class="is-size-7 mt-1" style="color: rgba(255,255,255,0.85);">In 5-letter groups: ${escapeHtml(grouped)}</p>
+		`;
+	}
+
+	panel.style.display = 'block';
+	panel.innerHTML = `
+		<div class="notification ${cls}" style="margin-bottom: 0;">
+			<p style="font-weight: 600;">
+				<span class="icon"><i class="mdi ${icon}"></i></span>
+				${escapeHtml(headline)}
+			</p>
+			${issuesHtml ? `<ul style="margin-top: 0.5rem; list-style: none;">${issuesHtml}</ul>` : ''}
+			${decodeHtml}
+		</div>
+	`;
+}
+
+/**
+ * Run validation against the current form state and render it.
+ * Returns the validation result.
+ */
+function validateAndRender() {
+	const result = runValidation(getFormData());
+	renderValidation(result);
+	return result;
+}
+
+/**
  * Show admin password modal
  */
 function showPasswordModal() {
@@ -355,6 +552,25 @@ async function handleFormSubmit(e) {
 	const puzzle = getFormData();
 	if (!validateForm(puzzle)) {
 		return;
+	}
+
+	// Run the Enigma engine to confirm these settings actually decode the
+	// ciphertext to the answer. If they don't, solvers can't win — block the
+	// save unless the admin has explicitly chosen to override.
+	const validation = validateAndRender();
+	if (validation.status === 'error' && !validationOverride) {
+		const decodeNote = validation.decoded
+			? `\n\nWith these settings the ciphertext decodes to:\n${validation.decoded}`
+			: '';
+		const proceed = confirm(
+			`This puzzle did not pass validation — solvers likely won't be able to solve it.${decodeNote}\n\n` +
+			`Review the red messages on the page. Save anyway?`
+		);
+		if (!proceed) {
+			document.getElementById('validation-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			return;
+		}
+		validationOverride = true;
 	}
 
 	const isNewPuzzle = puzzle.createNew;
@@ -475,6 +691,36 @@ async function init() {
 			el.value = el.value.toUpperCase();
 		});
 	});
+
+	// Live validation: re-run whenever any field that affects the puzzle
+	// changes. Editing invalidates a previous "save anyway" override.
+	const validationInputs = [
+		'rotor-left', 'rotor-middle', 'rotor-right',
+		'position-left', 'position-middle', 'position-right',
+		'ring-left', 'ring-middle', 'ring-right',
+		'reflector', 'plugboard', 'encoded-message', 'decoded-message',
+	];
+	const onFieldChange = () => {
+		validationOverride = false;
+		validateAndRender();
+	};
+	validationInputs.forEach(id => {
+		const el = document.getElementById(id);
+		if (el) {
+			el.addEventListener('input', onFieldChange);
+			el.addEventListener('change', onFieldChange);
+		}
+	});
+
+	// Manual "Validate now" button
+	const validateBtn = document.getElementById('validate-puzzle-btn');
+	if (validateBtn) {
+		validateBtn.addEventListener('click', () => {
+			const res = validateAndRender();
+			document.getElementById('validation-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			return res;
+		});
+	}
 
 	// Hamburger menu toggle for mobile
 	const burger = document.getElementById('navbar-burger');

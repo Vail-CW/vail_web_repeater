@@ -13,9 +13,9 @@
 		<link rel="manifest" href="manifest.json">
 		<link rel="icon" href="assets/vail.png" sizes="256x256" type="image/png">
 		<link rel="icon" href="assets/vail.svg" sizes="any" type="image/svg+xml">
-		<script type="module" src="scripts/enigma-admin.mjs?v=1.2.1"></script>
-		<link rel="stylesheet" href="vail.css?v=1.2.1">
-		<link rel="stylesheet" href="dark.css?v=1.2.1">
+		<script type="module" src="scripts/enigma-admin.mjs?v=1.2.2"></script>
+		<link rel="stylesheet" href="vail.css?v=1.2.2">
+		<link rel="stylesheet" href="dark.css?v=1.2.2">
 		<style>
 			.enigma-form-container {
 				background: rgba(0, 209, 178, 0.03);
@@ -161,7 +161,7 @@
 									<div class="notification is-info is-light" style="margin-top: 1rem;">
 										<p class="is-size-7">
 											<strong>Important:</strong> This puzzle uses the <strong>Enigma M3</strong> model.
-											Use <a href="https://cryptii.com/pipes/enigma-machine" target="_blank">cryptii.com/pipes/enigma-machine</a>
+											Use <a href="https://shadowenigma.com/simulator" target="_blank">shadowenigma.com/simulator</a>
 											to encode your messages with the M3 machine settings before entering them here.
 										</p>
 									</div>
@@ -375,6 +375,26 @@
 									<span class="icon is-small"><i class="mdi mdi-information"></i></span>
 									Choose "Create new puzzle" when starting a new week. This allows everyone to solve again and earn another leaderboard point.
 								</p>
+							</div>
+
+							<!-- Validation Section -->
+							<div class="setting-group">
+								<div class="setting-group-title">
+									<span class="icon"><i class="mdi mdi-shield-check"></i></span>
+									Validation
+								</div>
+								<p class="help mb-3">
+									We decode your ciphertext with the settings above using the same Enigma
+									engine as <a href="https://shadowenigma.com/simulator" target="_blank">shadowenigma.com/simulator</a>
+									and confirm it produces your answer. This catches mismatched settings before solvers ever see them.
+								</p>
+								<div class="control">
+									<button type="button" class="button is-info is-light is-fullwidth" id="validate-puzzle-btn">
+										<span class="icon"><i class="mdi mdi-shield-search"></i></span>
+										<span>Validate now</span>
+									</button>
+								</div>
+								<div id="validation-panel" class="mt-3" style="display: none;"></div>
 							</div>
 
 							<!-- Submit Button -->
